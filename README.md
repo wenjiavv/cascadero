@@ -33,10 +33,10 @@ python3 serve.py 5235        # then open http://localhost:5235/
 # can join a hot-seat game — set CASC_HOST=127.0.0.1 to keep it on this machine
 ```
 
-The UI is bilingual. It follows the browser language (Chinese for `zh-*`, English otherwise);
-the **EN / 中文** button in the header or `?lang=en` / `?lang=zh` overrides that and the choice is
-remembered. Game-log lines and server prompts are stored as message keys and rendered by each
-client, so players in one online room can each use their own language.
+The UI is bilingual. It follows the browser language (Chinese for `zh-*`, English otherwise).
+To override this, use the **EN / 中文** button in the header or add `?lang=en` or `?lang=zh` to the
+URL; the choice is remembered. Game-log lines and server prompts are stored as message keys and
+rendered by each client, so players in one online room can each use their own language.
 
 Run the AI tools (Node 18+; tested on Node 22/25):
 

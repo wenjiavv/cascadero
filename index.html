@@ -352,7 +352,7 @@ I18N.zh={
 I18N.en={
   'title':'Cascadero', 'h1':'Cascadero',
   'btn.online':'Online', 'btn.onlineTip':'Play with friends over the internet', 'btn.undo':'Undo', 'btn.undoTip':'Undo to before the last placement', 'btn.rules':'Rules', 'btn.new':'New game',
-  'h.map':'Map', 'h.tracks':'Success tracks', 'h.tracksBadge':'only a cube at the top (15) qualifies you to win', 'h.legend':'Legend', 'h.legendTip':'Banner symbols and highlights', 'h.score':'Score track', 'h.scoreBadge':'the game ends once someone reaches 50 VP', 'h.players':'Players', 'h.ach':'Achievements', 'h.log':'Log',
+  'h.map':'Map', 'h.tracks':'Success tracks', 'h.tracksBadge':"only your own colour's cube at the top (15) qualifies you to win", 'h.legend':'Legend', 'h.legendTip':'Banner symbols and highlights', 'h.score':'Score track', 'h.scoreBadge':'50 VP ends the game after the current turn', 'h.players':'Players', 'h.ach':'Achievements', 'h.log':'Log',
   'color.blue':'Blue · Mining', 'color.yellow':'Yellow · Farming', 'color.orange':'Orange · Crafts', 'color.pink':'Pink · Trade', 'color.white':'White · Learning',
   'cs.blue':'blue', 'cs.yellow':'yellow', 'cs.orange':'orange', 'cs.pink':'pink', 'cs.white':'white',
   'track.blue':'Blue', 'track.yellow':'Yellow', 'track.orange':'Orange', 'track.pink':'Pink', 'track.white':'White',
@@ -360,16 +360,16 @@ I18N.en={
   'ci.blue':'B', 'ci.yellow':'Y', 'ci.orange':'O', 'ci.pink':'P', 'ci.white':'W',
   'board.front':'Front (standard)', 'board.back':'Back (farmer board)',
   'ft.vp2':'+2 VP', 'ft.vp3':'+3 VP', 'ft.adv':'advance any cube 1 space', 'ft.envoy':'extra turn', 'ft.herald':'move a herald',
-  'glyph.herald':'H', 'glyph.ftHerald':'H→', 'glyph.seal':'S', 'glyph.start':'0', 'glyph.end':'END', 'glyph.sealUp':'seal +1',
-  'ach.a1':'All five cubes on the first banner (4)', 'ach.a2':'Hold 3 seals', 'ach.a3':'Three cubes on the second banner (10)', 'ach.a4':'One group linked to towns of all 5 colours', 'ach.a5':'A cube reaches the top (15)', 'ach.a6':'One group linked to 3 towns of one colour',
-  'ach.pair':'A group links 2 {cs} towns', 'ach.all':'All five colours linked',
+  'glyph.herald':'H', 'glyph.ftHerald':'H→', 'glyph.seal':'S', 'glyph.start':'0', 'glyph.end':'END', 'glyph.sealUp':'+1 seal',
+  'ach.a1':'All five cubes at or beyond the first banner (4)', 'ach.a2':'Hold 3 seals', 'ach.a3':'Three cubes at or beyond the second banner (10)', 'ach.a4':'One group linked to towns of all 5 colours', 'ach.a5':'A cube reaches the top (15)', 'ach.a6':'One group linked to 3 towns of one colour',
+  'ach.pair':'A group links 2 {cs} towns', 'ach.all':'All five colour-pair achievements',
   'lv.0':'Human', 'lv.1':'Bot · easy', 'lv.2':'Bot · normal', 'lv.3':'Bot · hard', 'lv.short.1':' easy', 'lv.short.2':' normal', 'lv.short.3':' hard',
   'player_n':'Player {n}', 'defaultBot':'Bot',
   'end.vp':'a player reached 50 VP', 'end.envoys':'out of envoys',
   // —— engine log ——
   'log.cubeTop':"{pn}'s {cs} cube is already at the top; the advance is ignored",
   'log.cubeBlocked':"{pn}'s {cs} cube is stopped by a barrier and stays at {pos}",
-  'log.cubeAdv':(a,d)=>`${a.pn} ${a.via==='chain'?'chain advance: ':a.via==='farmer'?'farmer advance: ':''}${d['cs.'+a.c]} track ${a.from}→${a.to}`,
+  'log.cubeAdv':(a,d)=>`${a.pn}: ${d['cs.'+a.c]} track ${a.from}→${a.to}${a.via==='chain'?' (chain advance)':a.via==='farmer'?' (farmer tile)':''}`,
   'log.cellVP':'　{cs} track {p}: +{gain} VP',
   'log.cellExtra':'　{cs} track {p}: extra turn after this one ⤴',
   'log.advSkip':'　advance declined',
@@ -385,10 +385,10 @@ I18N.en={
   'log.heraldSkip':'　herald move declined',
   'log.placeSeal':'{pn} places an envoy at {key} with a seal ◉',
   'log.place':(a)=>`${a.pn} places an envoy at ${a.key} ${a.single?'(alone)':'(group of '+a.size+')'}`,
-  'log.townScore':(a,d)=>`　${d['cs.'+a.c]} town ${a.town} scores: ${a.anyBefore?'not the first visitor +2':'first visitor +1'}${a.herald?' +1 herald':''}`,
+  'log.townScore':(a,d)=>`　${d['cs.'+a.c]} town ${a.town}: advance ${a.anyBefore?'2 spaces (visited before)':'1 space (first visit)'}${a.herald?' + 1 (herald)':''}`,
   'log.gameOver':(a,d)=>`🎉 Game over (${d['end.'+a.reason]||a.reason}). ${a.minor?'Nobody qualified; ':''}winner: ${a.pn}`,
   'log.noEnvoys':'{pn} has no envoys left to place',
-  'log.extraTurn':'⤴ {pn} takes an extra turn ({n} more banked)',
+  'log.extraTurn':'⤴ {pn} takes an extra turn ({n} remaining)',
   'log.newGame':(a)=>`New game: ${a.names.join(', ')}; first player ${a.startPn}`,
   'log.undoLocal':'↩ Undone to the start of this turn',
   'log.netStart':(a)=>`Online game started: ${a.names.join(', ')}; room ${a.code}`,
@@ -400,9 +400,9 @@ I18N.en={
   'why.trackAdv':'{cs} track {p}: advance any cube 1 space',
   'why.sealMove':'The seal on {cs} track {p} is already gone; you may move one of your envoys to an adjacent empty field',
   'why.farmerAdv':'Farmer tile {key}: advance any cube 1 space',
-  'why.farmerHerald':'Farmer tile {key}: move any herald to a town that has no herald and at least 1 empty neighbouring field',
+  'why.farmerHerald':'Farmer tile {key}: move any herald to a town with no herald and at least one adjacent empty field',
   'opt.cube':(a,d)=>`${d['color.'+a.c]}: ${a.pos} → ${a.blocked?(a.top?'at the top':'blocked by a barrier'):a.to}`,
-  'modal.cubeTitle':'Choose a cube to advance 1 space', 'modal.cubeCancel':"Don't advance",
+  'modal.cubeTitle':'Choose a cube to advance 1 space', 'modal.cubeCancel':'Skip',
   // —— status bar / interaction ——
   'status.place':(a)=>`${a.pn} to move: click an empty field to place an envoy.${a.seals?' (You hold a seal: a lone envoy next to a town may use it.)':''}`,
   'status.placeYou':(a)=>`Your turn: click an empty field to place an envoy.${a.seals?' (You hold a seal: a lone envoy next to a town may use it.)':''}`,
@@ -424,7 +424,7 @@ I18N.en={
   // —— result ——
   'result.title':(a,d)=>`Game over · ${d['end.'+a.reason]||a.reason}`,
   'result.minor':'Nobody reached the top of their own track; the highest score takes a minor win.',
-  'result.row':(a)=>`${a.name} — ${a.vp} VP ${a.qual?'(own track at the top ✅)':'(own track not at the top, not qualified)'}`,
+  'result.row':(a)=>`${a.name} — ${a.vp} VP ${a.qual?'(own-colour cube at the top ✅)':'(own-colour cube not at the top; not qualified)'}`,
   // —— new game ——
   'ng.title':'New game', 'ng.n':'Players', 'ng.herald':'Heralds on', 'ng.heraldStar':'★ towns (standard)', 'ng.heraldO':'● towns (variant)', 'ng.heraldX':'✖ towns (variant)',
   'ng.board':'Board', 'ng.front':'Front (36 towns, standard)', 'ng.back':'Back (26 towns + 24 farmer tiles)',
@@ -436,20 +436,20 @@ I18N.en={
   <h4>Groups and town scoring</h4><ul><li><b>Group</b>: 2 or more of your envoys connected through adjacent fields. A single envoy is not a group.</li>
   <li>When you place an envoy next to a town, that town scores if ① the envoy belongs to a group and ② before this placement <b>no</b> other member of that group was adjacent to the town (first contact). Each adjacent town is checked separately.</li>
   <li>A lone envoy next to a town may carry a <b>seal</b>; it then counts as a group and triggers scoring.</li>
-  <li>Scoring: advance your cube on the success track of the town's colour: +1 space if you are the first player with an envoy next to that town (any colour counts), otherwise +2; +1 more if the town holds a <b>herald</b>.</li></ul>
+  <li>Scoring: advance your cube on the success track of the town's colour: +1 space if this is the first envoy of any colour placed next to that town, otherwise +2 spaces; +1 more if the town holds a <b>herald</b>.</li></ul>
   <h4>Success-track actions</h4><ul><li>A cube triggers every banner it passes or stops on (lowest space first): points (on a two-number banner the first cube takes the larger one), ▲ advance any cube 1 space (may chain), ⤴ an extra turn after this one (always resolved last).</li>
   <li>◉ Seal spaces only work when the cube <b>stops exactly there</b>: if the seal is still there you must take it; if someone already took it you may move one of your envoys to an adjacent empty field (no scoring).</li>
   <li>✕ Barrier: a cube may not stop on it and halts one space below; only a 2- or 3-space advance can jump over it. The space below triggers its action the first time you arrive there.</li></ul>
-  <h4>Achievements</h4><ul><li>6 unique achievements worth +3 each (first to reach it takes it). For each colour, "a group links 2 towns of that colour" pays +2 (once per player per colour), and having all five colours pays another +10.</li></ul>
+  <h4>Achievements</h4><ul><li>Each of the 6 unique achievements awards +3 VP to the first player who completes it. For each colour, "a group links 2 towns of that colour" pays +2 VP (once per player per colour), and completing all five colour pairs pays another +10 VP.</li></ul>
   <h4>End and winner</h4><ul><li>The game ends when a player has ≥50 VP at the end of any turn, or when a player has to place an envoy but has none left.</li>
   <li><b>Only players whose own-colour cube has reached the top (15) qualify to win</b>; among them the highest score wins. If nobody qualifies, the highest score takes a minor win. Ties go to the player who acted later in the first round.</li></ul>
   <h4>Back side · farmer board</h4><ul><li>Fewer towns (26); 24 green farmer slots each start with a face-up farmer tile.</li>
-  <li>A farmer slot is a field, but it is <b>locked</b> for you until one of your envoys is adjacent to it (🔒 dashed edge = locked for the current player). As soon as an envoy lands on it (placed, or moved in through "move an envoy") the tile resolves: +2/+3 VP, ▲ advance any cube 1 space, ⤴ an extra turn, or move any herald to a town without a herald that has an empty neighbouring field. The tile stays where it is and can trigger again after the envoy moves away.</li>
+  <li>A farmer slot is a field, but it is <b>locked</b> for you until one of your envoys is adjacent to it (🔒 dashed edge = locked for the current player). As soon as an envoy lands on it (placed, or moved in through "move an envoy") the tile resolves: +2/+3 VP, ▲ advance any cube 1 space, ⤴ an extra turn, or move any herald to a town with no herald and at least one adjacent empty field. The tile stays where it is and can trigger again after the envoy moves away.</li>
   <li>An envoy on a farmer slot scores adjacent towns by the normal rules.</li></ul>
   <h4>Not implemented in this version</h4><ul><li>The "2 movable heralds" advanced variant; when one placement scores several towns they resolve in a fixed order.</li></ul>
   `,
   'legend.1':'<b>Points banner 2|1</b>: the first cube to arrive scores 2, later cubes score 1',
-  'legend.2':'<b>Big number taken</b>: the highlight moves to the small number; later cubes score only 1',
+  'legend.2':'<b>Higher reward claimed</b>: the lower value is now highlighted; later cubes score 1 VP',
   'legend.3':'<b>Points banner 3</b>: every cube that arrives scores 3',
   'legend.4':'<b>▲ Advance</b>: move any cube 1 more space; can chain',
   'legend.5':'<b>⤴ Extra turn</b>: take another turn after this one',
@@ -466,24 +466,24 @@ I18N.en={
   'net.undoMine':'↩ Undo requested, waiting for the other players ({a}/{b})',
   'undo.title':'Undo request', 'undo.ask':"{nm} wants to undo to before their last move. Everyone's moves since then will be rolled back too. Agree?", 'undo.yes':'Allow undo', 'undo.no':'Refuse',
   'net.undoOther':'↩ {nm} requested an undo, waiting for the vote…',
-  'net.moving':'{nm} is moving…', 'net.waiting':'Waiting…',
+  'net.moving':'{nm} is taking their turn…', 'net.waiting':'Waiting…',
   'net.waitFor':(a,d)=>`Waiting for ${a.nm} to ${d['kind.'+a.kind]||'move'}…${a.spect?' (you are spectating)':''}`,
   'net.submitted':'Submitted, waiting for the server…',
   'lobby.title':'Online room {code}', 'lobby.link':'Invite link', 'lobby.copy':'Copy', 'lobby.copied':'Copied',
-  'lobby.manual':(a)=>`Friends can also join by hand under "Online → Join a room": room code <b>${a.code}</b>, PIN <b>${a.pin}</b>${a.n>1?`. ${a.n} online now`:''}`,
-  'lobby.sitePin':'Friends without an invite link must first enter the site PIN: <b>{pin}</b> (only the host can see this)',
+  'lobby.manual':(a)=>`Friends can also select "Online → Join a room" and enter room code <b>${a.code}</b> and pairing code <b>${a.pin}</b>${a.n>1?`. ${a.n} online now`:''}`,
+  'lobby.sitePin':'Friends without an invite link must first enter the site pairing code: <b>{pin}</b> (only the host can see this)',
   'lobby.n':'Players', 'lobby.board':'Board', 'lobby.herald':'Heralds', 'lobby.heraldStar':'★ towns (standard)', 'lobby.heraldO':'● towns', 'lobby.heraldX':'✖ towns',
   'lobby.summary':(a)=>`${a.n} players · ${a.board==='back'?'back board (farmers)':'front board (standard)'} · heralds on ${a.icon} towns (set by the host)`,
-  'lobby.name':'My name', 'lobby.namePh':'fill in before sitting', 'lobby.me':' (me)', 'lobby.offline':'offline', 'lobby.stand':'Stand up', 'lobby.sit':'Sit here', 'lobby.start':'Start game', 'lobby.waitHost':'Waiting for the host to start…', 'lobby.leave':'Leave room',
-  'on.title':'Online', 'on.join':'Join a room', 'on.roomPh':'Room code', 'on.pinPh':'PIN', 'on.joinBtn':'Join', 'on.linkHint':'If you have an invite link, just open it; nothing to type.',
-  'on.create':'Create a room (host)', 'on.ownerPh':'Host password', 'on.createBtn':'Create room', 'on.offline':'Play offline', 'on.local':'New local game (vs bots or hot-seat)',
+  'lobby.name':'My name', 'lobby.namePh':'Name (required)', 'lobby.me':' (me)', 'lobby.offline':'offline', 'lobby.stand':'Stand up', 'lobby.sit':'Sit here', 'lobby.start':'Start game', 'lobby.waitHost':'Waiting for the host to start…', 'lobby.leave':'Leave room',
+  'on.title':'Online', 'on.join':'Join a room', 'on.roomPh':'Room code', 'on.pinPh':'Pairing code', 'on.joinBtn':'Join', 'on.linkHint':'If you have an invite link, just open it; nothing to type.',
+  'on.create':'Create a room (host)', 'on.ownerPh':'Host password', 'on.createBtn':'Create room', 'on.offline':'Play offline', 'on.local':'New local game (bots or hot-seat)',
   'ver.new':'⚠️ <b class="newver">A new version is available</b> (AI/features updated). Please reload the page after this turn.',
   'boot.connecting':'Connecting to the room…', 'boot.reconnecting':'Reconnecting to your last room…', 'boot.online':'Click "Online" to join a friend\'s room, or "New game" to play locally against bots.', 'boot.local':'Click "New game" in the top-right corner to start.',
   // —— server (used through engine.js) ——
-  'gate.title':'Cascadero', 'gate.h1':'Cascadero', 'gate.p':'Private table. Enter the PIN your friend gave you.', 'gate.ph':'PIN', 'gate.enter':'Enter', 'gate.hint':'If you received an invite link, just open it; no PIN needed.', 'gate.checking':'Checking…', 'gate.netErr':'Network error, please try again',
-  'err.tooMany':'Too many attempts, try again in a minute', 'err.ownerPin':'Wrong host password', 'err.roomsFull':'Room limit reached (CASC_MAX_ROOMS), try again later', 'err.roomPin':'No such room, or wrong PIN', 'err.sitePin':'Wrong PIN', 'err.badInvite':'Invite link invalid or expired; enter the site PIN instead',
-  'err.noRoom':'Not in a room yet', 'err.started':'The game has already started', 'err.startedSeat':'The game has started; seats can no longer change', 'err.seatNA':'That seat cannot be taken', 'err.seatTaken':'Seat already taken', 'err.ownerCfg':'Only the host can change the settings', 'err.ownerStart':'Only the host can start', 'err.colorDup':'Player colours must be different', 'err.seatEmpty':'Seat {n} is still empty (or switch it to a bot)', 'err.notYourTurn':"It's not your turn", 'err.illegal':'That move is not legal, choose again', 'err.spectUndo':'Spectators cannot undo', 'err.ownerRestart':'Only the host can restart', 'err.unknown':'Unknown message',
-  'err.undoNow':'Cannot undo right now', 'err.undoPending':'An undo request is already waiting for votes', 'err.undoNone':'You have no turn to undo yet', 'err.rate':'Too many messages', 'err.connFull':'Connection limit reached', 'err.authExpired':'Authorisation expired; reload the page and enter the site PIN again', 'err.noId':'Missing identity', 'err.server':'Server error',
+  'gate.title':'Cascadero', 'gate.h1':'Cascadero', 'gate.p':'Private table. Enter the pairing code your friend gave you.', 'gate.ph':'Pairing code', 'gate.enter':'Enter', 'gate.hint':'If you received an invite link, just open it; no pairing code needed.', 'gate.checking':'Checking…', 'gate.netErr':'Network error, please try again',
+  'err.tooMany':'Too many attempts, try again in a minute', 'err.ownerPin':'Wrong host password', 'err.roomsFull':'Room limit reached (CASC_MAX_ROOMS), try again later', 'err.roomPin':'No such room, or wrong pairing code', 'err.sitePin':'Wrong pairing code', 'err.badInvite':'Invite link invalid or expired; enter the site pairing code instead',
+  'err.noRoom':'Not in a room yet', 'err.started':'The game has already started', 'err.startedSeat':'The game has started; you can no longer change seats', 'err.seatNA':'That seat cannot be taken', 'err.seatTaken':'Seat already taken', 'err.ownerCfg':'Only the host can change the settings', 'err.ownerStart':'Only the host can start', 'err.colorDup':'Player colours must be different', 'err.seatEmpty':'Seat {n} is still empty (or switch it to a bot)', 'err.notYourTurn':"It's not your turn", 'err.illegal':'That move is not legal, choose again', 'err.spectUndo':'Spectators cannot undo', 'err.ownerRestart':'Only the host can restart', 'err.unknown':'Unknown message',
+  'err.undoNow':'Cannot undo right now', 'err.undoPending':'An undo request is already waiting for votes', 'err.undoNone':'You have no turn to undo yet', 'err.rate':'Too many messages', 'err.connFull':'Connection limit reached', 'err.authExpired':'Authorisation expired; reload the page and enter the site pairing code again', 'err.noId':'Missing identity', 'err.server':'Server error',
 };
 let LANG='zh';
 function setLang(l){ LANG=I18N[l]?l:'zh'; return LANG; }
