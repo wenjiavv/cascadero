@@ -28,3 +28,9 @@ __pycache__/
 
 # 生成物
 online/engine.js
+
+# 密钥/备份的常见变体（Codex 审计补充）
+.env.*
+!.env.example
+*.bak
+online/deploy.sh*

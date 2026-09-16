@@ -1,0 +1,14 @@
+# 自托管私人牌桌：cp .env.example .env（填口令）→ python3 online/build-engine.py → docker compose up -d --build
+# 默认只绑定本机回环地址；要给外地朋友用，请在前面放带 HTTPS 的反向代理（需转发 WebSocket），并在 .env 里打开 CASC_TRUST_PROXY=1
+services:
+  table:
+    build: .
+    container_name: cascadero-table
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - TZ=Asia/Shanghai
+    ports:
+      - "127.0.0.1:5235:5235"
+    volumes:
+      - ./online/data:/data

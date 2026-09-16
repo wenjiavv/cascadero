@@ -247,6 +247,7 @@ const UNIQUE_ACH = [
 
 // 格子与邻接（随所选版图重建）
 let BOARD_ID='front', CELLS=[], CELLSET=new Set(), TOWN={}, FIELDS=[], NB={}, TOWN_FIELDS={}, FIELD_TOWNS={}, FIELD_FIELDS={}, FARMER=new Set();
+function ensureBoard(st){ if (st && st.boardId && st.boardId!==BOARD_ID) setBoard(st.boardId); }   // 服务器多房间共用引擎全局版图：每次 await 回来先确认版图仍是本局的（浏览器里恒为真，零开销）
 function neighborsOf(key){
   const [c,r]=key.split(',').map(Number); let d;
   if (c%2===0) d=[[0,-1],[0,1],[-1,0],[-1,1],[1,0],[1,1]]; else d=[[0,-1],[0,1],[-1,-1],[-1,0],[1,-1],[1,0]];
@@ -352,17 +353,17 @@ async function advanceCube(st, pi, color, n, ctx, decide, why){
     if (sp.envoy){ ctx.extra++; log(st, `　${CSHORT[color]}轨 ${p} 格：本回合结束后再来一回合 ⤴`); }
     if (sp.adv){
       await checkAchievements(st, pi);
-      const c2 = await decide.chooseCube(st, pi, `${CSHORT[color]}轨 ${p} 格触发「推进任一方块 1 格」`);
-      if (c2){ await advanceCube(st, pi, c2, 1, ctx, decide, '连锁推进：'); }
+      const c2 = await decide.chooseCube(st, pi, `${CSHORT[color]}轨 ${p} 格触发「推进任一方块 1 格」`); ensureBoard(st);
+      if (c2){ await advanceCube(st, pi, c2, 1, ctx, decide, '连锁推进：'); ensureBoard(st); }
       else log(st, `　放弃推进`);
     }
     if (sp.seal && p===target){       // 折叠格只在停留时生效
       if (!st.tracks[color].sealTaken[p]){ st.tracks[color].sealTaken[p]=true; pl.seals++; fxEmit(st,{t:'seal',p:pi,c:color,pos:p}); log(st, `　${CSHORT[color]}轨 ${p} 格：取得印章 ◉（手中 ${pl.seals} 枚）`); }
       else {
         await checkAchievements(st, pi);
-        const mv = await decide.chooseMove(st, pi, `${CSHORT[color]}轨 ${p} 格的印章已被取走，可将你的一枚使者移到相邻空格`);
+        const mv = await decide.chooseMove(st, pi, `${CSHORT[color]}轨 ${p} 格的印章已被取走，可将你的一枚使者移到相邻空格`); ensureBoard(st);
         if (mv){ const e=st.board[mv.from]; delete st.board[mv.from]; st.board[mv.to]=e; fxEmit(st,{t:'move',p:pi,from:mv.from,to:mv.to}); log(st, `　移动使者 ${mv.from} → ${mv.to}（不触发计分）`);
-          if (FARMER.has(mv.to)) await farmerAction(st, pi, mv.to, ctx, decide); }
+          if (FARMER.has(mv.to)){ await farmerAction(st, pi, mv.to, ctx, decide); ensureBoard(st); } }
         else log(st, `　放弃移动`);
       }
     }
@@ -399,10 +400,10 @@ async function farmerAction(st, pi, key, ctx, decide){
   log(st, `　🌾 农夫板块 ${key}：${FT_NAME[t]}`);
   if (t==='vp2'||t==='vp3'){ const g=t==='vp2'?2:3; gainVP(st,pi,g); }
   else if (t==='envoy') ctx.extra++;
-  else if (t==='adv'){ const c2=await decide.chooseCube(st, pi, `农夫板块 ${key} 触发「推进任一方块 1 格」`); if (c2) await advanceCube(st, pi, c2, 1, ctx, decide, '农夫推进：'); else log(st,'　放弃推进'); }
+  else if (t==='adv'){ const c2=await decide.chooseCube(st, pi, `农夫板块 ${key} 触发「推进任一方块 1 格」`); ensureBoard(st); if (c2){ await advanceCube(st, pi, c2, 1, ctx, decide, '农夫推进：'); ensureBoard(st); } else log(st,'　放弃推进'); }
   else if (t==='herald'){
     if (!st.heralds.length || !heraldTargets(st).length) { log(st,'　没有可移动的使者棋/目标'); }
-    else { const mv=await decide.chooseHerald(st, pi, `农夫板块 ${key}：可将任一使者棋移到没有使者棋且至少有 1 个空邻格的城镇`);
+    else { const mv=await decide.chooseHerald(st, pi, `农夫板块 ${key}：可将任一使者棋移到没有使者棋且至少有 1 个空邻格的城镇`); ensureBoard(st);
       if (mv){ st.heralds=st.heralds.filter(h=>h!==mv.from); st.heralds.push(mv.to); fxEmit(st,{t:'herald',from:mv.from,to:mv.to}); log(st, `　使者棋 ${mv.from} → ${mv.to}`); } else log(st,'　放弃移动使者棋'); }
   }
   await checkAchievements(st, pi);
@@ -415,11 +416,11 @@ async function doPlacement(st, pi, key, useSeal, decide){
   else log(st, `${pname(st,pi)} 在 ${key} 放置使者${ev.single?'（单独）':'（成群 '+ev.group.size+'）'}`);
   const ctx={extra:0};
   await checkAchievements(st, pi);
-  if (FARMER.has(key)) await farmerAction(st, pi, key, ctx, decide);
+  if (FARMER.has(key)){ await farmerAction(st, pi, key, ctx, decide); ensureBoard(st); }
   for (const sc of ev.scorings){
     fxEmit(st,{t:'town',k:sc.town,c:sc.color});
     log(st, `　触发 ${CSHORT[sc.color]}色城镇 ${sc.town} 计分：${sc.anyBefore?'非首位到访 +2':'首位到访 +1'}${sc.herald?' +使者 1':''}`);
-    await advanceCube(st, pi, sc.color, sc.steps, ctx, decide, '');
+    await advanceCube(st, pi, sc.color, sc.steps, ctx, decide, ''); ensureBoard(st);
   }
   await checkAchievements(st, pi);
   return ctx;
@@ -446,9 +447,9 @@ function finishGame(st, reason){
 async function runTurn(st, decide){
   const pi=st.turn.player; const pl=P(st,pi);
   if (pl.envoys<=0){ log(st, `${pname(st,pi)} 没有使者可放置`); finishGame(st,'使者用尽'); return; }
-  const pick = await decide.choosePlacement(st, pi);
+  const pick = await decide.choosePlacement(st, pi); ensureBoard(st);
   if (!pick) return;                           // 被撤销/中断
-  const ctx = await doPlacement(st, pi, pick.key, pick.seal, decide);
+  const ctx = await doPlacement(st, pi, pick.key, pick.seal, decide); ensureBoard(st);
   st.turn.extra += ctx.extra;
   const r=endCheck(st); if (r){ finishGame(st,'有玩家达到 50 分'); return; }
   if (st.turn.extra>0){ st.turn.extra--; log(st, `⤴ ${pname(st,pi)} 获得额外回合（剩余 ${st.turn.extra}）`); }
@@ -610,7 +611,7 @@ async function botChoosePlacement(st, pi, lvl){
       const r=simEval(st,pi,k,seal,lvl);
       cands.push({key:k, seal, score:r.score+Math.random()*noise, st:r.st, extra:r.extra});
     }
-    if (++n%50===0) await sleep(0);
+    if (++n%50===0){ await sleep(0); ensureBoard(st); }
   }
   const T=tuneOf(P(st,pi));
   cands.sort((a,b)=>b.score-a.score);
@@ -640,7 +641,7 @@ async function botChoosePlacement(st, pi, lvl){
     top.sort((a,b)=>b.final-a.final); return {key:top[0].key, seal:top[0].seal};
   }
   for (const c of top){
-    let v=0; for (let r=0;r<rollNlocal;r++){ v+=rolloutValue(c.st, pi, c.extra, plies); if(r%2===1) await sleep(0); }
+    let v=0; for (let r=0;r<rollNlocal;r++){ v+=rolloutValue(c.st, pi, c.extra, plies); if(r%2===1){ await sleep(0); ensureBoard(st); } }
     c.final=c.score*T.rollMix + (v/rollNlocal);
     if (netOf(P(st,pi)) && T.netFinalW>0) c.final += T.netFinalW*(c.net!==undefined?c.net:valueNet(c.st,pi));   // 1 层学习式估值直接进最终打分
     if (netOf(P(st,pi)) && T.netSearchW>0){                                       // 用模型做 2 层对抗：对手前 netSearchN 个静态最优回应里，取让我最难看的局面的模型值
@@ -649,7 +650,7 @@ async function botChoosePlacement(st, pi, lvl){
       else { const rs=rolloutCands(c.st,nxt).map(k=>simEval(c.st,nxt,k,false,1)).sort((a,b)=>b.score-a.score).slice(0, T.netSearchN||12);
         let worst=1e9; for (const r of rs){ const v=valueNet(r.st,pi); if (v<worst) worst=v; } if (worst<1e9) c.final += T.netSearchW*worst; }
     }
-    await sleep(0);
+    await sleep(0); ensureBoard(st);
   }
   if (T.denyW>0 || T.denySealW>0 || T.denyAchW>0){ for (const c of top) c.final -= oppThreat(c.st, pi, T); }   // 威胁识别：留给对手的最佳一步越好，我这步越差
   top.sort((a,b)=>b.final-a.final);
@@ -1316,6 +1317,7 @@ function showResult(){
 function openNewGame(){
   const bg=document.getElementById('modalBg'), m=document.getElementById('modal');
   const saved = Object.assign({n:2, herald:'star', board:'front', players:[{name:'玩家1',color:'blue',bot:false},{name:'电脑',color:'pink',bot:true},{name:'玩家3',color:'yellow',bot:true},{name:'玩家4',color:'orange',bot:true}]}, JSON.parse(localStorage.getItem('casc_cfg')||'null')||{});
+  if (Array.isArray(saved.players)) saved.players.forEach((p,i)=>{ if (p) p.name=cleanNick(p.name,'玩家'+(i+1)); });
   const pRow=i=>`<div class="row" data-p="${i}"><span style="width:22px">${i+1}.</span><input type="text" value="${saved.players[i].name}" style="width:110px"><select class="col">${PLAYER_COLORS.map(c=>`<option value="${c}" ${saved.players[i].color===c?'selected':''}>${CNAME[c]}</option>`).join('')}</select><select class="bot">${[['0','真人'],['1','电脑·简单'],['2','电脑·普通'],['3','电脑·困难']].map(([v,l])=>{const lv=saved.players[i].level!==undefined?saved.players[i].level:(saved.players[i].bot?2:0);return `<option value="${v}" ${String(lv)===v?'selected':''}>${l}</option>`;}).join('')}</select></div>`;
   m.innerHTML=`<h3>新游戏</h3>
    <div class="row"><label>人数 <select id="ngN">${[2,3,4].map(n=>`<option ${saved.n===n?'selected':''}>${n}</option>`).join('')}</select></label>
@@ -1337,8 +1339,10 @@ function openNewGame(){
     startGame({players:use, herald, board});
   };
 }
+const cleanNick=(s,d)=>{ s=String(s||'').replace(/[<>&"']/g,'').trim().slice(0,12); return s||d; };   // 昵称会进 innerHTML，入口处去掉标签字符
 function startGame(cfg){
   if (NET.on) netLeave();
+  if (cfg && cfg.players) cfg.players.forEach((p,i)=>{ p.name=cleanNick(p.name,'玩家'+(i+1)); });
   if (UI.resolve){ const r=UI.resolve; UI.resolve=null; UI.mode='idle'; r(null); }
   S=newState(cfg); HISTORY=[]; recInit(S,false); log(S, `新游戏开始：${S.players.map((p,i)=>pname(S,i)).join('、')}；起始玩家 ${pname(S,S.start)}`, 't0');
   save(); render(); setTimeout(gameLoop, 50);
@@ -1380,7 +1384,8 @@ document.getElementById('btnRules').onclick=()=>{
 /* =====================  联机（WebSocket 客户端）  ===================== */
 /* 服务器权威：本机只负责渲染服务器发来的状态，轮到自己时按 ask 的类型复用本地同一套点击/弹窗流程，答复经 netAnswer 发回 */
 const NET={on:false, ws:null, room:null, pin:null, view:null, me:-1, id:null, askId:null, undoShown:0, resultShown:null, backoff:1000, timer:null, nameDraft:'', creating:null, lobbySig:''};
-(function(){ try{ NET.id=localStorage.getItem('casc_id'); if(!NET.id){ NET.id='u'+Math.random().toString(36).slice(2,10)+Date.now().toString(36); localStorage.setItem('casc_id',NET.id); } }catch(e){ NET.id='u'+Date.now().toString(36); } })();
+(function(){ const gen=()=>{ try{ if (crypto.randomUUID) return 'u'+crypto.randomUUID().replace(/-/g,''); }catch(e){} let r='u'; for (let i=0;i<4;i++) r+=Math.random().toString(36).slice(2,10); return r; };
+  try{ NET.id=localStorage.getItem('casc_id'); if(!NET.id||NET.id.length<20){ NET.id=gen(); localStorage.setItem('casc_id',NET.id); } }catch(e){ NET.id=gen(); } })();
 const netSend=o=>{ if (NET.ws && NET.ws.readyState===1) NET.ws.send(JSON.stringify(o)); };
 function netConnect(room, pin, create){
   NET.on=true; NET.room=room||null; NET.pin=pin||null; if (create) NET.creating=create; GEN++;
@@ -1418,10 +1423,11 @@ function netApply(v){
   const p=v.pending; const nm=i=>S?pname(S,i):'';
   if (v.undo){ const u=v.undo;
     if (u.by===NET.me) setStatus(`↩ 已请求撤销，等待其他玩家同意（${Object.values(u.votes).filter(Boolean).length}/${u.needed.length}）`);
-    else if (u.needed.includes(NET.me) && u.votes[NET.me]===undefined && NET.undoShown!==u.t){ NET.undoShown=u.t; UI.mode='idle'; modal.dataset.kind='undo';
+    else if (u.needed.includes(NET.me) && u.votes[NET.me]===undefined && NET.undoShown!==u.t){ NET.undoShown=u.t; UI.mode='idle'; UI.pick=null; UI.targets=null; NET.askId=null; modal.dataset.kind='undo';   // 撤销结束后按当前 pending 重新恢复交互
       showModal('撤销请求', `${nm(u.by)} 想撤销到自己上一手之前，这会同时回退之后所有人的行动。同意吗？`, [{label:'同意撤销',value:true},{label:'拒绝',value:false}], ok=>netSend({t:'undoVote',ok}), null); return; }
     else if (!u.needed.includes(NET.me)) setStatus(`↩ ${nm(u.by)} 请求撤销，等待其他玩家表决…`);
   }
+  if (!v.undo && modal.dataset.kind==='undo' && bg.classList.contains('show')){ bg.classList.remove('show'); modal.dataset.kind=''; NET.askId=null; }   // 撤销已被拒绝/超时，收掉残留弹窗
   if (!p){ UI.mode='idle'; if (!v.undo) setStatus(S ? `${nm(S.turn.player)} 行动中…` : '等待中…'); return; }
   if (p.seat!==NET.me){
     UI.mode='idle'; UI.pick=null; UI.targets=null; NET.askId=null;
@@ -1539,7 +1545,7 @@ window.__selftest = async function(n=5, matchup){
   if (room && pin){ render(); setStatus('正在连接房间…'); netConnect(room.toUpperCase(), pin); return; }
   if (window.CASC_ONLINE){ let saved=null; try{ saved=JSON.parse(localStorage.getItem('casc_room')||'null'); }catch(e){}
     if (saved && saved.room && saved.pin){ render(); setStatus('正在重新连接上次的房间…'); netConnect(String(saved.room).toUpperCase(), String(saved.pin)); return; } }
-  try{ const s=JSON.parse(localStorage.getItem('casc_state')||'null'); if (s && s.players){ S=s; setBoard(S.boardId||'front'); if(!S.farmerTiles) S.farmerTiles={}; if(S.ended){ render(); return; } recInit(S,true); render(); setTimeout(gameLoop,50); return; } }catch(e){}
+  try{ const s=JSON.parse(localStorage.getItem('casc_state')||'null'); if (s && s.players){ S=s; S.players.forEach((p,i)=>{ p.name=cleanNick(p.name,'玩家'+(i+1)); }); setBoard(S.boardId||'front'); if(!S.farmerTiles) S.farmerTiles={}; if(S.ended){ render(); return; } recInit(S,true); render(); setTimeout(gameLoop,50); return; } }catch(e){}
   render();
   if (window.CASC_ONLINE){ setStatus('点「联机」加入朋友的房间；也可以点「新游戏」在本机和电脑玩。'); openOnline(); }
   else { setStatus('点击右上角「新游戏」开始。'); openNewGame(); }

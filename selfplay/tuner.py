@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # 自对弈爬山调参（在多核机器上跑，engine.js 由 online/build-engine.py 生成）:纳入人类策略先验(印章/传令官/联动/步数经济);nice 低优先级 + 限并行控温
 import json, random, subprocess, time
+import os
+MATCH=os.path.join(os.path.dirname(os.path.abspath(__file__)),"match.js")   # 对局 CLI，见同目录 match.js
 DEF={"ownBase":1.6,"ownProg":0,"qualBonus":2,"sealCost":0,"blockW":1.0,"rollMix":0.5,
      "stepW":1.0,"extraW":2.5,"sealGainW":2.0,"heraldW":0,"wasteP":0,"chainSealW":2.0,"chainExtraW":2.5,"firstGiftP":0,"farmerMoveW":1.0}
 PARAMS={"ownBase":(0.8,3.0,0.3),"ownProg":(0,3,0.4),"qualBonus":(0,8,1.0),"sealCost":(0,2,0.4),
@@ -11,7 +13,7 @@ PRIOR=["sealGainW","extraW","chainSealW","chainExtraW","firstGiftP","farmerMoveW
 PAR=10                                               # 并行进程(控温:10/20 核)
 def chunk(a,b,n):
     cfg=json.dumps({"n":n,"a":{"level":3,"tune":a},"b":{"level":3,"tune":b}})
-    return subprocess.Popen(["nice","-n","10","node","engine.js",cfg],stdout=subprocess.PIPE)
+    return subprocess.Popen(["nice","-n","10","node",MATCH,cfg],stdout=subprocess.PIPE)
 def match(a,b,total=50,par=PAR):
     per=max(1,total//par); procs=[]
     for _ in range(par//2): procs.append(("F",chunk(a,b,per)))
@@ -19,7 +21,7 @@ def match(a,b,total=50,par=PAR):
     wa=wb=0
     for side,p in procs:
         try: out=json.loads(p.communicate(timeout=1800)[0])
-        except Exception: p.kill(); continue
+        except Exception as e: p.kill(); raise SystemExit(f"match.js 失败: {e}")
         if side=="F": wa+=out.get("A",0); wb+=out.get("B",0)
         else: wa+=out.get("B",0); wb+=out.get("A",0)
     return wa,wb

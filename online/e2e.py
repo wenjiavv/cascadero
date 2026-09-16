@@ -1,4 +1,4 @@
-# 私人牌桌端到端回归（Playwright 双浏览器）：BASE=http://127.0.0.1:5321/ PIN=<房主口令> SITE=<站点配对码> [CHROME_ARGS="--host-resolver-rules=MAP your.host 10.0.0.2"] [SHOTS=../shots/] python3 e2e.py
+# 私人牌桌端到端回归（Playwright 双浏览器）：BASE=http://127.0.0.1:5321/ PIN=<房主口令> SITE=<站点配对码> [CHROME_ARGS="--host-resolver-rules=MAP your.host 192.0.2.10"] [SHOTS=../shots/] python3 e2e.py
 
 import asyncio, time, json, os
 from playwright.async_api import async_playwright
@@ -21,7 +21,7 @@ async def main():
         await A.evaluate("document.getElementById('modalBg').classList.remove('show')")
         await A.click('#btnOnline'); await A.fill('#onOwner',PIN); await A.click('#onCreate')
         await A.wait_for_function("NET.room && document.getElementById('modal').dataset.kind==='lobby'", timeout=8000)
-        link=await A.evaluate("document.querySelector('#modal input[readonly]').value"); print('invite', link)
+        link=await A.evaluate("document.querySelector('#modal input[readonly]').value"); print('invite room', link.split('room=')[1].split('&')[0])   # 不打印配对码
         await A.fill('#lbName','房主'); await A.click('.lb-sit[data-i="0"]'); await A.wait_for_timeout(300)
         await B.goto(link); await B.wait_for_function("document.getElementById('modal').dataset.kind==='lobby'", timeout=8000)
         await B.fill('#lbName','朋友'); await B.click('.lb-sit[data-i="1"]'); await B.wait_for_timeout(400)
@@ -55,6 +55,14 @@ async def main():
         stA=await A.evaluate("({turn:S.turn.num, n:Object.keys(S.board).length, vp:S.players.map(p=>p.vp)})"); stB=await B.evaluate("({turn:S.turn.num, n:Object.keys(S.board).length, vp:S.players.map(p=>p.vp)})")
         print('sync A', stA, 'B', stB)
         await A.screenshot(path=OUT+'online-play.png')
+        # 撤销被拒绝：上一手的人请求，当前行动的人拒绝；之后当前行动的人必须还能落子
+        last=log[-1][0]; req=pages[last]; oth=pages[1-last]
+        await req.click('#btnUndo')
+        await oth.wait_for_function("document.getElementById('modal').dataset.kind==='undo' && document.getElementById('modalBg').classList.contains('show')", timeout=8000)
+        await oth.click('#modal button[data-i="1"]')
+        await oth.wait_for_function("!document.getElementById('modalBg').classList.contains('show') && (UI.mode==='place' || document.getElementById('modal').dataset.kind==='ask')", timeout=8000)
+        print('undo rejected; current player interaction restored, UI.mode=', await oth.evaluate('UI.mode'))
+        v,k=await play_one(); print('after rejected undo, move by seat', v['seat'], k); log.append((v['seat'],k))
         # 撤销：上一手是谁就由谁请求，对方同意
         last=log[-1][0]; req=pages[last]; oth=pages[1-last]
         before=await A.evaluate("S.turn.num")

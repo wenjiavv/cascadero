@@ -9,12 +9,16 @@ const WebSocket=require('ws');
 const E=require('./engine.js');
 
 const PORT=+(process.env.PORT||5235);
-const ROOT=process.env.CASC_ROOT||__dirname;
+const ROOT=process.env.CASC_ROOT||(fs.existsSync(path.join(__dirname,'index.html'))?__dirname:path.join(__dirname,'..'));   // 直接在 online/ 里启动时首页在上一级
 const DATA=process.env.CASC_DATA||path.join(__dirname,'data');
 const OWNER_PIN=(process.env.CASC_OWNER_PIN||'').trim();
 const SITE_PIN=(process.env.CASC_SITE_PIN||'').trim();
 if (!OWNER_PIN){ console.error('缺少环境变量 CASC_OWNER_PIN（房主口令）'); process.exit(1); }
 if (!SITE_PIN){ console.error('缺少环境变量 CASC_SITE_PIN（站点配对码）'); process.exit(1); }
+for (const [k,v] of [['CASC_OWNER_PIN',OWNER_PIN],['CASC_SITE_PIN',SITE_PIN]]){ if (/^(change-me|owner-1234|site-5678)/i.test(v)){ console.error(`${k} 还是示例值，请改成自己的口令`); process.exit(1); } if (v.length<4||v.length>32){ console.error(`${k} 长度须在 4–32 位`); process.exit(1); } }
+const TRUST_PROXY=process.env.CASC_TRUST_PROXY==='1';   // 只有明确放在反向代理后面才信 X-Forwarded-For
+process.on('unhandledRejection', e=>console.error('unhandledRejection', e));
+process.on('uncaughtException', e=>console.error('uncaughtException', e));   // 单个异常不该拖死所有房间
 fs.mkdirSync(DATA,{recursive:true});
 /* ---------- 站点门禁：没有授权 cookie 只能看到配对码页；配对码正确或邀请链接有效才发 30 天授权；改配对码=旧授权全部失效 ---------- */
 let SECRET=''; try{ SECRET=fs.readFileSync(path.join(DATA,'secret.key'),'utf8').trim(); }catch(e){}
@@ -22,10 +26,11 @@ if (SECRET.length<32){ SECRET=crypto.randomBytes(32).toString('hex'); fs.writeFi
 const AUTH_DAYS=30;
 const pinHash=()=>crypto.createHash('sha256').update(SITE_PIN).digest('hex').slice(0,8);
 function makeToken(){ const body=(Math.floor(Date.now()/1000)+AUTH_DAYS*86400)+'.'+pinHash(); return body+'.'+crypto.createHmac('sha256',SECRET).update(body).digest('hex').slice(0,40); }
-function checkToken(t){ if (!t||typeof t!=='string') return false; const q=t.split('.'); if (q.length!==3) return false; const [exp,ph,sig]=q;
+function checkToken(t){ if (!t||typeof t!=='string'||t.length>80) return false; const q=t.split('.'); if (q.length!==3) return false; const [exp,ph,sig]=q;
+  if (!/^\d{1,12}$/.test(exp) || !/^[0-9a-f]{8}$/.test(ph) || !/^[0-9a-f]{40}$/.test(sig)) return false;   // 先卡格式，timingSafeEqual 不会因长度/多字节抛错
   if (!(+exp>Date.now()/1000) || ph!==pinHash()) return false; const want=crypto.createHmac('sha256',SECRET).update(exp+'.'+ph).digest('hex').slice(0,40);
-  return sig.length===want.length && crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(want)); }
-function cookies(req){ const o={}; (req.headers.cookie||'').split(';').forEach(c=>{ const i=c.indexOf('='); if (i>0) o[c.slice(0,i).trim()]=decodeURIComponent(c.slice(i+1).trim()); }); return o; }
+  return crypto.timingSafeEqual(Buffer.from(sig),Buffer.from(want)); }
+function cookies(req){ const o={}; String(req.headers.cookie||'').split(';').forEach(c=>{ const i=c.indexOf('='); if (i>0){ try{ o[c.slice(0,i).trim()]=decodeURIComponent(c.slice(i+1).trim()); }catch(e){} } }); return o; }   // 畸形百分号编码当作没有该 cookie
 const authed=req=>checkToken(cookies(req).casc_auth);
 function setAuthCookie(req,res){ const secure=String(req.headers['x-forwarded-proto']||'').includes('https'); res.setHeader('Set-Cookie', `casc_auth=${makeToken()}; Path=/; Max-Age=${AUTH_DAYS*86400}; HttpOnly; SameSite=Lax${secure?'; Secure':''}`); }
 const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -37,7 +42,7 @@ input{font:inherit;font-size:20px;letter-spacing:4px;text-align:center;width:100
 button{font:inherit;width:100%;margin-top:10px;padding:9px;border:1px solid #a67a1f;border-radius:6px;background:#d9a83a;color:#2f2113;font-weight:600;cursor:pointer}button:hover{background:#f5d36a}
 .msg{color:#a5501a;font-size:13px;min-height:18px;margin-top:8px}.hint{font-size:12px;color:#7a5a3a;margin-top:12px}</style></head><body><div class="card">
 <h1>卡斯卡德罗</h1><p>私人对局站点。请输入朋友告诉你的配对码。</p>
-<form id="f"><input id="pin" name="pin" autocomplete="one-time-code" placeholder="配对码" maxlength="12" autofocus><button type="submit">进入</button></form>
+<form id="f"><input id="pin" name="pin" autocomplete="one-time-code" placeholder="配对码" maxlength="32" autofocus><button type="submit">进入</button></form>
 <div class="msg" id="msg">${esc(msg||'')}</div><div class="hint">如果收到的是邀请链接，直接打开链接即可，不需要配对码。</div></div>
 <script>document.getElementById('f').onsubmit=async e=>{e.preventDefault();const m=document.getElementById('msg');m.textContent='验证中…';
 try{const r=await fetch('auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:document.getElementById('pin').value.trim()})});const j=await r.json();
@@ -56,7 +61,9 @@ const DEFAULT_SEATS=()=>[{name:'',color:'blue',level:0},{name:'',color:'pink',le
 const LEVEL_NAME={1:'电脑·简单',2:'电脑·普通',3:'电脑·困难'};
 
 const rooms={};
-const MAX_ROOMS=+(process.env.CASC_MAX_ROOMS||8);   // 私人牌桌：同时存在的房间上限（本项目只面向自托管小圈子，不作公开服务运营）
+const MAX_ROOMS=(v=>Number.isFinite(v)&&v>0?Math.floor(v):8)(+(process.env.CASC_MAX_ROOMS||8));
+const MAX_CONN=(v=>Number.isFinite(v)&&v>0?Math.floor(v):64)(+(process.env.CASC_MAX_CONN||64));   // 同时在线连接上限
+const GAMELOG_MAX=50e6, logLast={};   // 对局记录文件上限 50MB；每 IP 3 秒最多一次上报   // 私人牌桌：同时存在的房间上限（本项目只面向自托管小圈子，不作公开服务运营）
 const sockets=new Set();
 const failLog={};   // ip → {n, until}
 
@@ -204,9 +211,10 @@ function applyUndo(room){
 }
 
 /* ---------- 消息 ---------- */
-function ipOf(req){ return (req.headers['x-forwarded-for']||'').split(',')[0].trim() || req.socket.remoteAddress || '?'; }
+function ipOf(req){ if (TRUST_PROXY){ const xf=String(req.headers['x-forwarded-for']||'').split(',').map(s=>s.trim()).filter(Boolean); if (xf.length) return xf[xf.length-1]; } return req.socket.remoteAddress || '?'; }   // 取最后一跳代理写入的地址，客户端自带的前缀不算
 function locked(ip){ const f=failLog[ip]; return f && f.until>Date.now(); }
-function noteFail(ip){ const f=failLog[ip]||(failLog[ip]={n:0,until:0}); f.n++; if (f.n>=5){ f.until=Date.now()+60000; f.n=0; } }
+function noteFail(ip){ if (Object.keys(failLog).length>5000) for (const k in failLog) delete failLog[k]; const f=failLog[ip]||(failLog[ip]={n:0,until:0,last:0}); f.n++; f.last=Date.now(); if (f.n>=5){ f.until=Date.now()+60000; f.n=0; } }
+setInterval(()=>{ const now=Date.now(); for (const ip in failLog){ const f=failLog[ip]; if (f.until<now && now-f.last>600000) delete failLog[ip]; } }, 60000);
 function join(ws, room){ ws.room=room.code; touch(room); send(ws,{t:'welcome',code:room.code,pin:room.pin,isOwner:ws.id===room.owner}); broadcast(room); }
 function onMessage(ws, m){
   const room=ws.room?rooms[ws.room]:null; const seat=room?seatOf(room,ws.id):-1;
@@ -232,7 +240,7 @@ function onMessage(ws, m){
       if (s.token && s.token!==ws.id) return fail(ws,'座位已有人');
       room.seats.forEach(x=>{ if (x.token===ws.id) x.token=null; });
       s.token=ws.id; s.name=cleanName(m.name, '玩家'+(i+1)); touch(room); persist(); return broadcast(room); }
-    case 'stand': { if (room.phase!=='lobby') return fail(ws,'对局已开始'); room.seats.forEach(x=>{ if (x.token===ws.id) x.token=null; }); persist(); return broadcast(room); }
+    case 'stand': { if (room.phase!=='lobby') return fail(ws,'对局已开始'); let changed=false; room.seats.forEach(x=>{ if (x.token===ws.id){ x.token=null; changed=true; } }); if (!changed) return; persist(); return broadcast(room); }
     case 'config': {
       if (ws.id!==room.owner) return fail(ws,'只有房主能改设置'); if (room.phase!=='lobby') return fail(ws,'对局已开始');
       const c=m.cfg||{}; if ([2,3,4].includes(+c.n)) room.cfg.n=+c.n; if (['front','back'].includes(c.board)) room.cfg.board=c.board; if (['star','o','x'].includes(c.herald)) room.cfg.herald=c.herald;
@@ -271,7 +279,8 @@ function onMessage(ws, m){
 const INDEX=path.join(ROOT,'index.html');
 function serveIndex(res){ fs.readFile(INDEX,(err,data)=>{ if (err){ res.writeHead(500); return res.end('index.html 缺失'); }
   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-cache'}); res.end(data.toString('utf8').replace('<head>','<head><script>window.CASC_ONLINE=true</script>')); }); }
-const server=http.createServer(async (req,res)=>{
+const server=http.createServer((req,res)=>{ handleHttp(req,res).catch(e=>{ console.error('http', e); try{ res.writeHead(500); res.end('server error'); }catch(_){} }); });   // 顶层异常边界
+async function handleHttp(req,res){
   const u=new URL(req.url,'http://x'); const ip=ipOf(req);
   if (u.pathname==='/healthz'){ res.writeHead(200); return res.end('ok'); }
   if (u.pathname==='/auth' && req.method==='POST'){
@@ -296,17 +305,23 @@ const server=http.createServer(async (req,res)=>{
   if (u.pathname==='/api/version'){ let v='0'; try{ v=String(Math.floor(fs.statSync(INDEX).mtimeMs/1000)); }catch(e){}
     res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'}); return res.end(JSON.stringify({v})); }
   if (u.pathname==='/api/gamelog' && req.method==='POST'){
+    const now=Date.now(); if (now-(logLast[ip]||0)<3000){ res.writeHead(429); return res.end('{"ok":false,"msg":"too fast"}'); } logLast[ip]=now;
+    let size=0; try{ size=fs.statSync(GAMELOG).size; }catch(e){} if (size>GAMELOG_MAX){ res.writeHead(507); return res.end('{"ok":false,"msg":"gamelog full"}'); }
     let body=''; req.on('data',d=>{ body+=d; if (body.length>2e6) req.destroy(); });
     req.on('end',()=>{ try{ const rec=JSON.parse(body); if (!rec||typeof rec!=='object'||!rec.id||!rec.moves) throw 0; fs.appendFileSync(GAMELOG, JSON.stringify(rec)+'\n'); res.writeHead(200,{'Content-Type':'application/json'}); res.end('{"ok":true}'); }catch(e){ res.writeHead(400); res.end(); } });
     return; }
   res.writeHead(404); res.end('not found');
-});
+}
 const wss=new WebSocket.Server({server, path:'/ws', maxPayload:64*1024});
+wss.on('error', e=>console.error('wss', e.message));
+function rateOk(ws){ const now=Date.now(); if (!ws.rl||now-ws.rl.t>5000) ws.rl={n:0,t:now}; if (++ws.rl.n>40){ if (ws.rl.n===41) fail(ws,'消息太频繁'); return false; } return true; }   // 每 5 秒最多 40 条
 wss.on('connection',(ws,req)=>{
+  ws.on('error', e=>{ console.error('ws', e.message); try{ ws.terminate(); }catch(_){} });   // 超大帧/协议错误只断这一条连接
+  if (sockets.size>=MAX_CONN){ try{ ws.send(JSON.stringify({t:'error',fatal:true,msg:'在线人数已达上限'})); }catch(e){} return ws.close(); }
   if (!authed(req)){ try{ ws.send(JSON.stringify({t:'error',fatal:true,msg:'授权已过期，请刷新页面重新输入配对码'})); }catch(e){} return ws.close(); }
   ws.id=null; ws.room=null; ws.ip=ipOf(req); ws.alive=true; sockets.add(ws);
   ws.on('pong',()=>{ ws.alive=true; });
-  ws.on('message',data=>{ let m; try{ m=JSON.parse(data); }catch(e){ return; } if (!m||typeof m!=='object') return;
+  ws.on('message',data=>{ if (!rateOk(ws)) return; let m; try{ m=JSON.parse(data); }catch(e){ return; } if (!m||typeof m!=='object') return;
     if (!ws.id){ ws.id=String(m.id||'').replace(/[^\w-]/g,'').slice(0,40); if (!ws.id) return fail(ws,'缺少身份',true); }
     try{ onMessage(ws,m); }catch(e){ console.error('msg', e); fail(ws,'服务器处理出错'); } });
   ws.on('close',()=>{ sockets.delete(ws); if (ws.room && rooms[ws.room]) broadcast(rooms[ws.room]); });

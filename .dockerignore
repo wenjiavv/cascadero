@@ -1,0 +1,8 @@
+# 白名单：镜像只需要这些文件
+*
+!index.html
+!online/server.js
+!online/engine.js
+!online/package.json
+!online/package-lock.json
+!online/node_modules

@@ -26,6 +26,8 @@
 
 ```bash
 python3 serve.py 5235        # 打开 http://localhost:5235/
+# 只提供 index.html 和本地对局记录接口；默认监听所有网卡，方便局域网里的手机来同屏玩，
+# 设 CASC_HOST=127.0.0.1 可只留本机
 ```
 
 跑 AI 工具（Node 18+，在 22/25 上测过）：
@@ -37,7 +39,7 @@ node simcheck.js 5 back      # 差分测试：正式引擎 vs AI 的一步模拟
 PAIRED=1 node duel.js 80 '{}' '{"burnP":0}' 3 out.json back   # 配对对照：默认权重 vs 覆盖值
 ```
 
-训练估值网络（Python 3 + numpy）：
+训练估值网络（Python 3 + numpy，`pip install numpy`）：
 
 ```bash
 cd online
@@ -51,7 +53,7 @@ python3 embed-net.py valuenet.json && python3 build-engine.py   # 嵌进 index.h
 2–4 人在六角地图上放使者。使者让一个群首次接触某色城镇就在该色成功轨上计分（首位到访拿大奖），
 可能顺手取印章、触发连锁推进或额外回合，使者棋落在哪座城镇哪里就加成。六项独特成就和五项双城成就
 各只结算一次。谁先到 50 分就触发终局，但只有自己颜色的方块爬到轨顶才有**获胜资格**，否则按小胜规则
-比分数。版图背面把一部分田野换成农夫格，24 块面朝下的板块（2 分×5、3 分×5、推进×5、额外回合×4、
+比分数。版图背面把一部分田野换成农夫格，24 块明置的板块（2 分×5、3 分×5、推进×5、额外回合×4、
 移使者棋×5）在你贴着它建造后解锁。
 
 已实现：全部核心规则与农夫板。未实现：双使者棋高级变体、一次落子触发多城时自选计分顺序。
@@ -196,30 +198,36 @@ index.html ──build-engine.py──▶ engine.js ──selfplay.js──▶ s
 * 服务器权威：客户端只发决策，服务器校验后广播全量状态（含动效事件）。电脑座位在服务器上跑。
   撤销需其他所有真人同意，120 秒超时。
 * 保存的数据：`rooms.json`（状态快照，每房 ≤24 份）、`gamelog.jsonl`（只记录有真人参与的局，
-  昵称即玩家自填，无账号）、30 天 HMAC 授权 cookie、内存里的 IP 失败计数。不出本机。
+  昵称即玩家自填，无账号，文件上限 50MB）、30 天 HMAC 授权 cookie、内存里的 IP 失败计数。不出本机。
+* 加固：每条连接的消息限流、在线连接上限（`CASC_MAX_CONN`，默认 64）、授权令牌严格格式校验、
+  顶层异常边界，畸形请求或超大帧只会断掉那一条请求/连接。放在自己控制的反向代理后面时设
+  `CASC_TRUST_PROXY=1`，失败锁定按 `X-Forwarded-For` 最后一跳计；容器能被直接访问时绝不要开。
 
 ```bash
-cd online && cp .env.example .env    # 填 CASC_OWNER_PIN / CASC_SITE_PIN
-python3 build-engine.py && npm ci --omit=dev
-docker compose up -d --build         # http://127.0.0.1:5235/
+cp .env.example .env                 # 填 CASC_OWNER_PIN / CASC_SITE_PIN（4–32 位，不能留示例值）
+python3 online/build-engine.py
+docker compose up -d --build         # http://127.0.0.1:5235/ （Dockerfile 与 compose 在仓库根目录）
 # 不用 Docker：
-CASC_OWNER_PIN=x CASC_SITE_PIN=y PORT=5321 node server.js
+cd online && npm ci --omit=dev && CASC_OWNER_PIN=x CASC_SITE_PIN=y PORT=5321 node server.js
 ```
 
-`deploy.example.sh` 演示 tar 经 ssh 部署到 NAS。`e2e.py` 是 Playwright 回归
-（门禁 → 建房 → 邀请链接 → 对局 → 同意制撤销 → 重连 → 坏链接）。
+`online/deploy.example.sh` 演示 tar 经 ssh 部署到 NAS。`online/e2e.py` 是 Playwright 回归
+（门禁 → 建房 → 邀请链接 → 对局 → 同意制撤销 → 重连 → 坏链接）；先 `pip install playwright && playwright install chromium`，
+运行时 `PIN`、`SITE` 两个环境变量填被测服务器的 `CASC_OWNER_PIN`、`CASC_SITE_PIN`。
 
-请保持这个用法，不要拿它运营公开或商业服务。
+作者只支持自托管的私人用法，不会协助公开部署。这是对预期用途的说明，不是附加的授权条款；拿去做公开服务还会牵涉
+NOTICE.md 里说的权利问题。
 
 ## 目录结构
 
 ```
 index.html              游戏 + 引擎 + AI（单文件，中文界面）
 serve.py                本地静态服务 + /api/gamelog
+Dockerfile, .dockerignore, docker-compose.yml, .env.example   牌桌打包（构建上下文=仓库根）
 online/
   build-engine.py       index.html → engine.js
   server.js             私人牌桌服务器（ws）
-  Dockerfile, docker-compose.yml, deploy.example.sh, .env.example
+  deploy.example.sh     tar 经 ssh 部署到 Docker 主机
   e2e.py                牌桌的 Playwright 回归
   duel.js               权重/模型之间的配对对照
   xduel.js              两个引擎版本之间的配对对照
@@ -231,7 +239,7 @@ online/
   diag-stuck.js         "卡在禁行格下"诊断
   valuenet.json         线上模型
   tune-back/            上一轮调参的日志与锚点
-selfplay/               多核机爬山调参（tuner.py/validate.py）及其日志
+selfplay/               多核机爬山调参（tuner.py/validate.py，match.js 对局 CLI）及其日志
 data/                   样本数据集
 docs/                   截图
 ```

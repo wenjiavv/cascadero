@@ -29,6 +29,8 @@ Play locally (single player vs bots, hot-seat 2–4 players):
 
 ```bash
 python3 serve.py 5235        # then open http://localhost:5235/
+# serves only index.html plus the local game-log API; listens on all interfaces so phones on your LAN
+# can join a hot-seat game — set CASC_HOST=127.0.0.1 to keep it on this machine
 ```
 
 Run the AI tools (Node 18+; tested on Node 22/25):
@@ -40,7 +42,7 @@ node simcheck.js 5 back      # differential test: real engine vs the AI's one-st
 PAIRED=1 node duel.js 80 '{}' '{"burnP":0}' 3 out.json back   # paired duel: default weights vs an override
 ```
 
-Train a value net (Python 3 + numpy):
+Train a value net (Python 3 + numpy, `pip install numpy`):
 
 ```bash
 cd online
@@ -57,7 +59,7 @@ seals, trigger chain advances or extra turns, and the herald piece adds a bonus 
 sits. Six unique achievements and five colour-pair achievements pay out once. The first player
 to 50 points ends the game, but you only *qualify* to win if the cube of your own colour has
 climbed to the top of its track. The back side of the board replaces some fields with farmer
-slots holding 24 face-down tiles (2 VP ×5, 3 VP ×5, advance ×5, extra turn ×4, move herald ×5)
+slots holding 24 face-up tiles (2 VP ×5, 3 VP ×5, advance ×5, extra turn ×4, move herald ×5)
 that unlock when you build next to them.
 
 Implemented: all core rules and the farmer board. Not implemented: the two-herald advanced
@@ -237,31 +239,41 @@ be **private by construction**, not a public game site:
   state (including animation events). Bot seats run on the server. Undo requires consent from
   every other human, with a 120 s timeout.
 * Data kept: `rooms.json` (state snapshots, ≤24 per room), `gamelog.jsonl` only for games with
-  at least one human (nicknames as typed, no accounts), a 30-day HMAC auth cookie, and an
-  in-memory IP failure counter. Nothing leaves the machine.
+  at least one human (nicknames as typed, no accounts, file capped at 50 MB), a 30-day HMAC auth
+  cookie, and an in-memory IP failure counter. Nothing leaves the machine.
+* Hardening: per-connection message rate limit, connection cap (`CASC_MAX_CONN`, default 64),
+  strict auth-token format checks, top-level error boundaries so a malformed request or an
+  oversized frame only drops that request or connection. Behind a reverse proxy you control, set
+  `CASC_TRUST_PROXY=1` so lockouts use the last `X-Forwarded-For` hop; never set it when the
+  container is reachable directly.
 
 ```bash
-cd online && cp .env.example .env    # set CASC_OWNER_PIN / CASC_SITE_PIN
-python3 build-engine.py && npm ci --omit=dev
-docker compose up -d --build         # http://127.0.0.1:5235/
+cp .env.example .env                 # set CASC_OWNER_PIN / CASC_SITE_PIN (4–32 chars, not the sample values)
+python3 online/build-engine.py
+docker compose up -d --build         # http://127.0.0.1:5235/  (Dockerfile and compose file are at the repo root)
 # or without Docker:
-CASC_OWNER_PIN=x CASC_SITE_PIN=y PORT=5321 node server.js
+cd online && npm ci --omit=dev && CASC_OWNER_PIN=x CASC_SITE_PIN=y PORT=5321 node server.js
 ```
 
-`deploy.example.sh` shows a tar-over-ssh deploy to a NAS. `e2e.py` is a Playwright regression
-(gate → create room → invite link → play → consented undo → reconnect → bad link).
+`online/deploy.example.sh` shows a tar-over-ssh deploy to a NAS. `online/e2e.py` is a Playwright
+regression (gate → create room → invite link → play → consented undo → reconnect → bad link);
+install with `pip install playwright && playwright install chromium`, then run it with `PIN` and
+`SITE` set to the same values as `CASC_OWNER_PIN` and `CASC_SITE_PIN` of the server under test.
 
-Please keep it that way. Do not run this as a public or commercial service.
+The author only supports private self-hosting and will not help with public deployments. That is a
+statement of intended use, not an extra license term; a public service would also raise the rights
+questions in NOTICE.md.
 
 ## Repository layout
 
 ```
 index.html              game + engine + AI (single file, zh-CN UI)
 serve.py                local static server + /api/gamelog
+Dockerfile, .dockerignore, docker-compose.yml, .env.example   table packaging (build context = repo root)
 online/
   build-engine.py       index.html → engine.js
   server.js             private table server (ws)
-  Dockerfile, docker-compose.yml, deploy.example.sh, .env.example
+  deploy.example.sh     tar-over-ssh deploy to a Docker host
   e2e.py                Playwright regression for the table
   duel.js               paired duels between weight sets / models
   xduel.js              paired duels between two engine builds
@@ -273,7 +285,7 @@ online/
   diag-stuck.js         "stuck under the barrier" diagnostic
   valuenet.json         deployed model
   tune-back/            tuning log and anchor state from the last run
-selfplay/               many-core hill-climb (tuner.py/validate.py) and its logs
+selfplay/               many-core hill-climb (tuner.py/validate.py, match.js game CLI) and its logs
 data/                   sample dataset
 docs/                   screenshots
 ```

@@ -21,8 +21,10 @@ publisher. Please buy the physical game. If you are a rights holder and would li
 part of this repository changed or removed, open an issue or contact the maintainer
 through GitHub and it will be handled promptly.
 
-Do not use this code to operate a public or commercial game service. The bundled table
-server is deliberately invite-only and intended for a self-hosted, private group.
+The bundled table server is deliberately invite-only, and the authors only support private,
+self-hosted use of it. That sentence describes intended use and maintenance scope; it does not
+add any restriction to the MIT-licensed code. Operating a public service would in any case raise
+the third-party rights questions above, which would be yours to resolve.
 
 **中文**
 
@@ -39,4 +41,5 @@ MIT 协议**不覆盖**、作者也**不主张**以下内容的任何权利：
 本项目与设计师、出版社均无关联，未获其背书或赞助。请支持正版实体游戏。若权利人希望修改或移除本仓库的任何部分，
 请通过 GitHub issue 或联系维护者，我们会尽快处理。
 
-请勿用本代码运营公开或商业性的游戏服务。附带的牌桌服务器有意设计为邀请制，只供自托管的私人小圈子使用。
+附带的牌桌服务器有意设计为邀请制，作者只支持自托管的私人小圈子用法。这句话说明的是预期用途和维护范围，
+不给 MIT 授权的代码附加任何限制。若拿去运营公开服务，上面提到的第三方权利问题需要你自行解决。

@@ -1,6 +1,0 @@
-data/
-tune-*/
-*.log
-*.jsonl
-engine-before-*.js
-.env
