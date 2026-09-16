@@ -1,4 +1,4 @@
-# 使者与城邦 (Hex Envoy)
+# 卡斯卡德罗 (Cascadero) — 非官方粉丝复刻 + AI
 
 **[English → README.md](README.md)**
 

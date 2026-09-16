@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""使者与城邦 静态服务 + 对局记录接口（单机版）。
+"""卡斯卡德罗（Cascadero）静态服务 + 对局记录接口（单机版）。
 GET  /*            静态文件（同 http.server）
 POST /api/gamelog  追加一行 JSON 到 games/gamelog.jsonl（同一对局 id 会多次上报，取最后一条为准）
 """

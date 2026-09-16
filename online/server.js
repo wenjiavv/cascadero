@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* 使者与城邦 私人牌桌服务器：静态页 + WebSocket 房间 + 权威规则引擎（engine.js 由 index.html 自动生成）
+/* 卡斯卡德罗 私人牌桌服务器：静态页 + WebSocket 房间 + 权威规则引擎（engine.js 由 index.html 自动生成）
    - 只有持房主口令的人能开房；进房要「房间码 + 配对码」（邀请链接把两者都带上）
    - 服务器按引擎回合循环推进，轮到真人就下发 ask，收到合法答复才继续；电脑座位在服务器上跑 AI
    - 撤销 = 请求者回退到自己上一手之前，必须其他真人全部同意 */
@@ -29,14 +29,14 @@ function cookies(req){ const o={}; (req.headers.cookie||'').split(';').forEach(c
 const authed=req=>checkToken(cookies(req).casc_auth);
 function setAuthCookie(req,res){ const secure=String(req.headers['x-forwarded-proto']||'').includes('https'); res.setHeader('Set-Cookie', `casc_auth=${makeToken()}; Path=/; Max-Age=${AUTH_DAYS*86400}; HttpOnly; SameSite=Lax${secure?'; Secure':''}`); }
 const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function gatePage(msg){ return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>使者与城邦</title>
+function gatePage(msg){ return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>卡斯卡德罗 · Cascadero</title>
 <style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1b4d4a;color:#2f2113;font:15px/1.6 -apple-system,"PingFang SC","Noto Sans SC",sans-serif}
 .card{background:#f7eed9;border:3px solid #4a3120;border-radius:12px;padding:26px 30px;width:min(92vw,380px);box-shadow:inset 0 0 0 3px #f7eed9,inset 0 0 0 4px #b48f5a,0 12px 30px rgba(0,0,0,.35)}
 h1{margin:0 0 4px;font:700 26px/1.2 "Songti SC","STSong","Noto Serif CJK SC",Georgia,serif;letter-spacing:3px;color:#4a3120}p{margin:6px 0 14px;font-size:13px;color:#5a4634}
 input{font:inherit;font-size:20px;letter-spacing:4px;text-align:center;width:100%;box-sizing:border-box;padding:8px;border:1px solid #b48f5a;border-radius:6px;background:#fff;text-transform:uppercase}
 button{font:inherit;width:100%;margin-top:10px;padding:9px;border:1px solid #a67a1f;border-radius:6px;background:#d9a83a;color:#2f2113;font-weight:600;cursor:pointer}button:hover{background:#f5d36a}
 .msg{color:#a5501a;font-size:13px;min-height:18px;margin-top:8px}.hint{font-size:12px;color:#7a5a3a;margin-top:12px}</style></head><body><div class="card">
-<h1>使者与城邦</h1><p>私人对局站点。请输入朋友告诉你的配对码。</p>
+<h1>卡斯卡德罗</h1><p>私人对局站点。请输入朋友告诉你的配对码。</p>
 <form id="f"><input id="pin" name="pin" autocomplete="one-time-code" placeholder="配对码" maxlength="12" autofocus><button type="submit">进入</button></form>
 <div class="msg" id="msg">${esc(msg||'')}</div><div class="hint">如果收到的是邀请链接，直接打开链接即可，不需要配对码。</div></div>
 <script>document.getElementById('f').onsubmit=async e=>{e.preventDefault();const m=document.getElementById('msg');m.textContent='验证中…';

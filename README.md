@@ -1,4 +1,4 @@
-# Hex Envoy (使者与城邦)
+# Cascadero (卡斯卡德罗) — unofficial fan implementation + AI
 
 **[中文说明 → README.zh-CN.md](README.zh-CN.md)**
 

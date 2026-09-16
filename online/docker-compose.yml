@@ -3,7 +3,7 @@
 services:
   table:
     build: .
-    container_name: hex-envoy-table
+    container_name: cascadero-table
     restart: unless-stopped
     env_file: .env
     environment:

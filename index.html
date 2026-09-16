@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>使者与城邦 · 六角轨道棋</title>
+<title>卡斯卡德罗 · Cascadero</title>
 <style>
 :root{
   --bg:#dfd1b1; --paper:#f7eed9; --paper2:#eee1c2; --ink:#2f2113; --walnut:#4a3120; --line:#b48f5a;
@@ -16,6 +16,7 @@
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,"PingFang SC","Noto Sans SC",sans-serif;touch-action:manipulation;-webkit-text-size-adjust:100%}
 header{display:flex;align-items:center;gap:12px;padding:7px 16px;background:var(--felt);color:#f3e7c9;border-bottom:3px solid var(--brass)}
 header h1{margin:0;font:700 22px/1.1 var(--serif);letter-spacing:3px;white-space:nowrap}
+header h1 small{font:400 11px/1 Georgia,"Times New Roman",serif;letter-spacing:2px;color:#b9a27a;margin-left:8px;vertical-align:middle;text-transform:uppercase}
 header .status{flex:1;min-width:220px;background:#fff6d6;border-left:5px solid var(--brass);border-radius:8px;padding:4px 12px;color:var(--ink);font-size:13px;min-height:34px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;line-height:1.35}
 header .status b{color:#a5501a}
 .mini{display:flex;gap:6px;flex-wrap:wrap}
@@ -44,7 +45,10 @@ body.wide main{grid-template-columns:var(--bw) var(--bw) minmax(280px,1fr);justi
 body.wide .side{display:flex;flex-direction:column;gap:12px;grid-column:3;grid-row:1/3;min-height:0}
 body.wide .playersP,body.wide .achP,body.wide .logP{grid-column:auto;grid-row:auto}
 body.wide .logP{flex:1;display:flex;flex-direction:column;min-height:0}
-body.wide .log{flex:1;min-height:200px;height:auto}
+body.wide .logP>.fold{flex:1;display:flex;flex-direction:column;min-height:0}
+body.wide .logP>.fold>summary{flex:none}
+body.wide .logP>.fold::details-content{flex:1;display:flex;flex-direction:column;min-height:0}   /* Chrome 131+/Safari 18.4+：details 内容包装盒也要纵向 flex，老浏览器退化为固定 320px */
+body.wide .log{flex:1 1 0;min-height:320px;height:0}
 @media (max-width:900px){main{grid-template-columns:1fr}.mapP,.trackP,.scoreP,.playersP,.achP,.logP{grid-column:1;grid-row:auto}}
 /* —— 动效：放下 / 爬轨 / 移动 —— */
 @keyframes fxPop{0%{transform:scale(2.4);opacity:0}55%{transform:scale(.86);opacity:1}100%{transform:scale(1);opacity:1}}
@@ -97,6 +101,9 @@ body.wide .ach{grid-template-columns:1fr}
 .log{height:260px;overflow:auto;font-size:12px;background:#fffaee;border:1px solid #dcc59a;border-radius:6px;padding:6px}
 .log div{padding:1px 0;border-bottom:1px dotted #eadcbd}
 .log .t0{color:#1c6f6a;font-weight:600}
+.log .fold-bar{position:sticky;top:0;z-index:1;margin:-6px -6px 4px;padding:4px 8px;background:#f3e8cc;border-bottom:1px solid #dcc59a;color:#7a5a3a;font-size:11px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.log .fold-bar b{cursor:pointer;color:var(--walnut);border-bottom:1px dotted var(--walnut);font-weight:600}
+.log .fold-bar b:hover{color:#a5501a;border-color:#a5501a}
 .legendBox{position:absolute;top:9px;right:12px;margin:0;z-index:6}
 .legendBox summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--walnut);font-weight:600;padding:2px 9px;border:1px solid var(--line);border-radius:12px;background:#fffaee;user-select:none;line-height:18px}
 .legendBox summary:hover{background:#fff}
@@ -139,7 +146,7 @@ main>*{min-width:0}
   main{padding:8px;gap:8px}
 }
 @media (max-width:600px){
-  header>button .long{display:none}
+  header>button .long,header h1 small{display:none}
   header>button{padding:3px 8px}
   .panel{padding:8px 8px 10px}
   .panel h2{font-size:14px}
@@ -155,7 +162,7 @@ main>*{min-width:0}
 </head>
 <body>
 <header>
-  <h1>使者与城邦</h1>
+  <h1>卡斯卡德罗<small class="long">Cascadero</small></h1>
   <div class="status" id="status"></div>
   <div class="mini" id="mini"></div>
   <button id="btnOnline" title="和朋友在线联机">联机</button>
@@ -1206,7 +1213,18 @@ function renderAch(){
   h+=`<div class="a teal"><span class="five">${TRACK_COLORS.map(c=>`<i style="color:${COL[c]}">${CSHORT[c]}</i>`).join('')}<span style="margin-left:7px">五色连接全部达成</span></span><span>${S.players.map(p=>p.tealAll?`<span class="tag" style="background:${COL[p.color]}"></span>`:'').join('')}+10</span></div>`;
   el.innerHTML=h;
 }
-function renderLog(){ const el=document.getElementById('log'); if(!S){el.innerHTML='';return;} el.innerHTML=S.log.slice(-120).map(l=>`<div class="${l.c}">${l.m}</div>`).join(''); el.scrollTop=el.scrollHeight; }
+let LOG_MORE=0, LOG_GAME=null;                    // 记录面板分段折叠：默认只显示最近几手，更早的按段展开；换局归零
+const LOG_TAIL=14, LOG_STEP=20;
+function logWindowStart(L, n){ let i=Math.max(0, L.length-n); while (i>0 && i<L.length && (L[i].m||'').startsWith('　')) i--; return i; }   // 起点对齐到某一手的首行（子行以全角空格开头）
+function renderLog(keepTop){
+  const el=document.getElementById('log'); if(!S){ el.innerHTML=''; return; }
+  if (LOG_GAME!==S.seed){ LOG_GAME=S.seed; LOG_MORE=0; }
+  const L=S.log, start=logWindowStart(L, LOG_TAIL+LOG_MORE), hidden=start;
+  const bar=(hidden>0||LOG_MORE>0) ? `<div class="fold-bar">${hidden>0?`前面还有 ${hidden} 条记录 <b data-act="more">展开 ${Math.min(LOG_STEP,hidden)} 条</b>`:'更早的记录已全部展开'}${LOG_MORE>0?`<b data-act="less">收起</b>`:''}</div>` : '';
+  el.innerHTML=bar+L.slice(start).map(l=>`<div class="${l.c}">${l.m}</div>`).join('');
+  el.scrollTop=keepTop?0:el.scrollHeight;
+}
+document.getElementById('log').addEventListener('click', e=>{ const b=e.target.closest('b[data-act]'); if (!b||!S) return; if (b.dataset.act==='more') LOG_MORE+=LOG_STEP; else LOG_MORE=0; renderLog(b.dataset.act==='more'); });
 function setStatus(html){ document.getElementById('status').innerHTML=html; }
 // 图例：每条一行，图标与成功轨上的画法完全一致
 function renderLegend(){
