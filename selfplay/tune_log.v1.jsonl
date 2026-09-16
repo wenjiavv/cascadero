@@ -1,0 +1,14 @@
+{"it": 1, "cand": {"qualBonus": 1.74}, "w": [24, 24], "acc": false, "sec": 10}
+{"it": 2, "cand": {"sealCost": 0.45, "qualBonus": 1.05}, "w": [25, 23], "acc": false, "sec": 10}
+{"it": 3, "cand": {"ownProg": 0}, "w": [22, 26], "acc": false, "sec": 10}
+{"it": 4, "cand": {"ownProg": 0}, "w": [24, 24], "acc": false, "sec": 10}
+{"it": 5, "cand": {"qualBonus": 3.45, "sealCost": 0.05}, "w": [23, 25], "acc": false, "sec": 10}
+{"it": 6, "cand": {"rollMix": 0.43, "ownProg": 0}, "w": [23, 25], "acc": false, "sec": 10}
+{"it": 7, "cand": {"rollMix": 0.62}, "w": [22, 26], "acc": false, "sec": 10}
+{"it": 8, "cand": {"sealCost": 0.25}, "w": [26, 22], "acc": false, "sec": 10}
+{"it": 9, "cand": {"ownBase": 1.5, "rollMix": 0.22}, "w": [17, 31], "acc": false, "sec": 10}
+{"it": 10, "cand": {"sealCost": 0}, "w": [17, 31], "acc": false, "sec": 10}
+{"anchor": true, "it": 10, "champ": {}, "w": [26, 22]}
+{"it": 11, "cand": {"ownBase": 1.4, "ownProg": 0}, "w": [24, 24], "acc": false, "sec": 10}
+{"it": 12, "cand": {"ownProg": 0.18}, "w": [28, 20], "acc": true, "sec": 10}
+{"it": 13, "cand": {"ownProg": 0.18, "rollMix": 0.33, "sealCost": 0.58}, "w": [18, 30], "acc": false, "sec": 10}

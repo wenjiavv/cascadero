@@ -1,0 +1,41 @@
+{"it": 1, "cand": {"sealGainW": 2.6, "heraldW": 0.3, "extraW": 2.8}, "w": [27, 23], "acc": false, "sec": 35}
+{"it": 2, "cand": {"sealGainW": 2.6, "heraldW": 0.8, "extraW": 2.8, "wasteP": 0}, "w": [29, 21], "acc": true, "sec": 34}
+{"it": 3, "cand": {"sealGainW": 2.6, "heraldW": 0.8, "extraW": 2.62, "wasteP": 0, "sealCost": 0.73}, "w": [27, 23], "acc": false, "sec": 35}
+{"it": 4, "cand": {"sealGainW": 2.6, "heraldW": 0.8, "extraW": 2.8, "wasteP": 0}, "w": [25, 25], "acc": false, "sec": 36}
+{"it": 5, "cand": {"sealGainW": 2.6, "heraldW": 0.8, "extraW": 2.8, "wasteP": 0, "ownBase": 1.55}, "w": [22, 28], "acc": false, "sec": 34}
+{"it": 6, "cand": {"sealGainW": 2.6, "heraldW": 0.62, "extraW": 2.8, "wasteP": 0.0}, "w": [23, 27], "acc": false, "sec": 37}
+{"it": 7, "cand": {"sealGainW": 2.6, "heraldW": 0.8, "extraW": 2.8, "wasteP": 0.38, "sealCost": 0.08}, "w": [22, 28], "acc": false, "sec": 35}
+{"it": 8, "cand": {"sealGainW": 2.6, "heraldW": 0.8, "extraW": 2.8, "wasteP": 0, "ownBase": 1.97}, "w": [25, 25], "acc": false, "sec": 50}
+{"it": 9, "cand": {"sealGainW": 2.6, "heraldW": 1.29, "extraW": 2.8, "wasteP": 0}, "w": [19, 31], "acc": false, "sec": 57}
+{"it": 10, "cand": {"sealGainW": 2.6, "heraldW": 1.42, "extraW": 2.8, "wasteP": 0}, "w": [18, 32], "acc": false, "sec": 36}
+{"anchor": true, "it": 10, "champ": {"sealGainW": 2.6, "heraldW": 0.8, "extraW": 2.8, "wasteP": 0}, "w": [11, 39]}
+{"it": 11, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 2.75, "wasteP": 0}, "w": [39, 11], "acc": true, "sec": 54}
+{"it": 12, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 2.67, "wasteP": 0}, "w": [28, 22], "acc": false, "sec": 64}
+{"it": 13, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74}, "w": [31, 19], "acc": true, "sec": 54}
+{"it": 14, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 4.08, "wasteP": 0, "stepW": 0.74, "sealCost": 0.93}, "w": [25, 25], "acc": false, "sec": 35}
+{"it": 15, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "sealCost": 0.33, "qualBonus": 1.68}, "w": [27, 23], "acc": false, "sec": 36}
+{"it": 16, "cand": {"sealGainW": 2.6, "heraldW": 0.37, "extraW": 3.13, "wasteP": 0, "stepW": 1.06}, "w": [19, 31], "acc": false, "sec": 36}
+{"it": 17, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "rollMix": 0.66, "ownProg": 0}, "w": [25, 25], "acc": false, "sec": 36}
+{"it": 18, "cand": {"sealGainW": 2.6, "heraldW": 0.07, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.09}, "w": [13, 37], "acc": false, "sec": 34}
+{"it": 19, "cand": {"sealGainW": 2.09, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74}, "w": [25, 25], "acc": false, "sec": 34}
+{"it": 20, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61}, "w": [31, 19], "acc": true, "sec": 35}
+{"anchor": true, "it": 20, "champ": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61}, "w": [28, 22]}
+{"it": 21, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.36, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61, "sealCost": 0.48}, "w": [17, 33], "acc": false, "sec": 37}
+{"it": 22, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61}, "w": [22, 28], "acc": false, "sec": 35}
+{"it": 23, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61}, "w": [19, 31], "acc": false, "sec": 36}
+{"it": 24, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.28}, "w": [19, 31], "acc": false, "sec": 35}
+{"it": 25, "cand": {"sealGainW": 2.6, "heraldW": 0.5, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61}, "w": [10, 40], "acc": false, "sec": 37}
+{"it": 26, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.2}, "w": [25, 25], "acc": false, "sec": 36}
+{"it": 27, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61, "ownProg": 0.28, "rollMix": 0.37}, "w": [24, 26], "acc": false, "sec": 36}
+{"it": 28, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.66, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61, "ownProg": 0}, "w": [27, 23], "acc": false, "sec": 36}
+{"it": 29, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.9, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61}, "w": [22, 28], "acc": false, "sec": 36}
+{"it": 30, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61, "blockW": 1.37}, "w": [26, 24], "acc": false, "sec": 36}
+{"anchor": true, "it": 30, "champ": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61}, "w": [22, 28]}
+{"it": 31, "cand": {"sealGainW": 2.6, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.67, "ownBase": 1.61}, "w": [19, 31], "acc": false, "sec": 35}
+{"it": 32, "cand": {"sealGainW": 2.6, "heraldW": 0.33, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61}, "w": [16, 34], "acc": false, "sec": 36}
+{"it": 33, "cand": {"sealGainW": 2.29, "heraldW": 0, "extraW": 3.13, "wasteP": 0, "stepW": 0.74, "ownBase": 1.61, "rollMix": 0.46}, "w": [21, 29], "acc": false, "sec": 35}
+{"it": 1, "cand": {"sealGainW": 2.78, "extraW": 3.13, "stepW": 0.74, "ownBase": 1.61, "chainSealW": 2.6, "chainExtraW": 2.8, "rollMix": 0.83}, "w": [29, 21], "acc": true, "sec": 35}
+{"it": 2, "cand": {"sealGainW": 2.78, "extraW": 3.13, "stepW": 0.74, "ownBase": 1.61, "chainSealW": 2.6, "chainExtraW": 2.8, "rollMix": 0.83, "ownProg": 0.54}, "w": [28, 22], "acc": false, "sec": 36}
+{"it": 3, "cand": {"sealGainW": 2.78, "extraW": 3.13, "stepW": 0.74, "ownBase": 1.61, "chainSealW": 2.81, "chainExtraW": 3.54, "rollMix": 0.83}, "w": [23, 27], "acc": false, "sec": 35}
+{"it": 4, "cand": {"sealGainW": 2.78, "extraW": 3.13, "stepW": 0.74, "ownBase": 1.34, "chainSealW": 2.6, "chainExtraW": 2.8, "rollMix": 0.99}, "w": [29, 21], "acc": true, "sec": 36}
+{"it": 5, "cand": {"sealGainW": 2.78, "extraW": 3.13, "stepW": 0.74, "ownBase": 1.34, "chainSealW": 2.45, "chainExtraW": 2.8, "rollMix": 0.73}, "w": [24, 26], "acc": false, "sec": 35}

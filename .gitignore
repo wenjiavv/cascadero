@@ -1,0 +1,30 @@
+# 运行数据 / 私人内容（对局记录含真人玩家昵称，绝不上传）
+games/
+online/data/
+online/*.jsonl
+online/tune-*/c*.json
+diag-stuck*.jsonl
+samples*.jsonl
+*.jsonl.bak*
+
+# 本地备份与历史快照
+*.bak-*
+online/engine-before-*.js
+online/valuenet-mix14.json
+shots/
+
+# 部署脚本的真实版本（含主机地址）与密钥
+online/deploy.sh
+.env
+*.env
+!online/.env.example
+
+# 依赖与临时
+node_modules/
+__pycache__/
+*.pyc
+*.tar.gz
+.DS_Store
+
+# 生成物
+online/engine.js

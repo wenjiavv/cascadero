@@ -1,0 +1,14 @@
+# 自托管私人牌桌：docker compose up -d --build
+# 默认只绑定本机回环地址；要给朋友用，请在前面放一个带 HTTPS 的反向代理（需开启 WebSocket 转发）
+services:
+  table:
+    build: .
+    container_name: hex-envoy-table
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - TZ=Asia/Shanghai
+    ports:
+      - "127.0.0.1:5235:5235"
+    volumes:
+      - ./data:/data
