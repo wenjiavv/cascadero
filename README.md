@@ -33,6 +33,11 @@ python3 serve.py 5235        # then open http://localhost:5235/
 # can join a hot-seat game — set CASC_HOST=127.0.0.1 to keep it on this machine
 ```
 
+The UI is bilingual. It follows the browser language (Chinese for `zh-*`, English otherwise);
+the **EN / 中文** button in the header or `?lang=en` / `?lang=zh` overrides that and the choice is
+remembered. Game-log lines and server prompts are stored as message keys and rendered by each
+client, so players in one online room can each use their own language.
+
 Run the AI tools (Node 18+; tested on Node 22/25):
 
 ```bash
@@ -267,7 +272,7 @@ questions in NOTICE.md.
 ## Repository layout
 
 ```
-index.html              game + engine + AI (single file, zh-CN UI)
+index.html              game + engine + AI (single file, English / 中文 UI)
 serve.py                local static server + /api/gamelog
 Dockerfile, .dockerignore, docker-compose.yml, .env.example   table packaging (build context = repo root)
 online/

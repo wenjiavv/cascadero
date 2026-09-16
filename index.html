@@ -33,6 +33,7 @@ header>button{border-color:#3f7a75;background:#245f5b;color:#f3e7c9;white-space:
 header>button:hover{background:#2e716c}
 header>button.primary{background:var(--brass);color:#2f2113;border-color:#a67a1f}
 header>button.primary:hover{background:var(--brass2)}
+header>button.lang{padding:4px 8px;font-size:12px;letter-spacing:.5px}
 main{display:grid;grid-template-columns:var(--bw) var(--bw);grid-auto-rows:auto;gap:12px;padding:12px;justify-content:center}
 .mapP{grid-column:1;grid-row:1}
 .trackP{grid-column:2;grid-row:1;position:relative}
@@ -162,39 +163,40 @@ main>*{min-width:0}
 </head>
 <body>
 <header>
-  <h1>卡斯卡德罗<small class="long">Cascadero</small></h1>
+  <h1 id="h1">卡斯卡德罗<small class="long">Cascadero</small></h1>
   <div class="status" id="status"></div>
   <div class="mini" id="mini"></div>
-  <button id="btnOnline" title="和朋友在线联机">联机</button>
-  <button id="btnUndo" title="撤销到上一次落子前">撤销</button>
-  <button id="btnRules">规则<span class="long">摘要</span></button>
-  <button class="primary" id="btnNew">新游戏</button>
+  <button id="btnOnline" data-t="btn.online" data-tt="btn.onlineTip">联机</button>
+  <button id="btnUndo" data-t="btn.undo" data-tt="btn.undoTip">撤销</button>
+  <button id="btnRules" data-t="btn.rules">规则<span class="long">摘要</span></button>
+  <button class="primary" id="btnNew" data-t="btn.new">新游戏</button>
+  <button id="btnLang" class="lang" title="Language / 语言">EN</button>
 </header>
 <main>
   <section class="panel mapP">
-    <h2>地图 <span class="badge" id="mapInfo"></span></h2>
+    <h2><span data-t="h.map">地图</span> <span class="badge" id="mapInfo"></span></h2>
     <div class="mapWrap"><svg id="map" viewBox="0 0 520 660" xmlns="http://www.w3.org/2000/svg"></svg></div>
   </section>
   <section class="panel trackP">
-    <h2>成功轨 <span class="badge">方块爬到顶端 15 才有获胜资格</span></h2>
+    <h2><span data-t="h.tracks">成功轨</span> <span class="badge" data-t="h.tracksBadge">方块爬到顶端 15 才有获胜资格</span></h2>
     <svg id="tracks" viewBox="0 0 520 660" xmlns="http://www.w3.org/2000/svg"></svg>
-    <details class="legendBox" id="legendBox" title="横幅符号与高亮说明"><summary>图例</summary><ul class="legend" id="legend"></ul></details>
+    <details class="legendBox" id="legendBox" data-tt="h.legendTip"><summary data-t="h.legend">图例</summary><ul class="legend" id="legend"></ul></details>
   </section>
   <section class="panel scoreP">
-    <h2>计分轨 <span class="badge">有人到 50 分即触发终局</span></h2>
+    <h2><span data-t="h.score">计分轨</span> <span class="badge" data-t="h.scoreBadge">有人到 50 分即触发终局</span></h2>
     <svg id="score" viewBox="0 0 936 110" xmlns="http://www.w3.org/2000/svg"></svg>
   </section>
   <div class="side">
     <section class="panel playersP">
-      <h2>玩家</h2>
+      <h2 data-t="h.players">玩家</h2>
       <div class="players" id="players"></div>
     </section>
     <section class="panel achP">
-      <details class="fold" id="foldAch" open><summary><h2>成就</h2></summary>
+      <details class="fold" id="foldAch" open><summary><h2 data-t="h.ach">成就</h2></summary>
       <div class="ach" id="ach"></div></details>
     </section>
     <section class="panel logP">
-      <details class="fold" id="foldLog" open><summary><h2>记录</h2></summary>
+      <details class="fold" id="foldLog" open><summary><h2 data-t="h.log">记录</h2></summary>
       <div class="log" id="log"></div></details>
     </section>
   </div>
@@ -205,8 +207,292 @@ main>*{min-width:0}
 <script>
 /* =====================  基础数据  ===================== */
 const COL = {blue:'#2a9bc4', yellow:'#f2c53d', orange:'#e8842e', pink:'#d5407a', white:'#efe8d6'};
-const CNAME = {blue:'蓝·矿业', yellow:'黄·农业', orange:'橙·制造', pink:'粉·商贸', white:'白·教育'};
-const CSHORT = {blue:'蓝', yellow:'黄', orange:'橙', pink:'粉', white:'白'};
+/* =====================  文案（中 / 英）  =====================
+   引擎与界面共用一本词典，服务器经 engine.js 取同一份。引擎写日志和决策提示只记「键 + 参数」（k / a），
+   界面按自己的语言渲染，所以同一房间的玩家可以各看各的语言；m 是写入时语言的缓存文本，只作旧数据兼容。
+   模板里 {C} / {cs} 由参数 c（颜色键）换成该语言的颜色全名 / 简称，{ft} 由参数 t 换成农夫板块名；
+   以全角空格「　」开头的日志是上一手的子行（记录面板按它折叠）。 */
+const I18N={};
+I18N.zh={
+  'title':'卡斯卡德罗 · Cascadero', 'h1':'卡斯卡德罗<small class="long">Cascadero</small>',
+  'btn.online':'联机', 'btn.onlineTip':'和朋友在线联机', 'btn.undo':'撤销', 'btn.undoTip':'撤销到上一次落子前', 'btn.rules':'规则<span class="long">摘要</span>', 'btn.new':'新游戏',
+  'h.map':'地图', 'h.tracks':'成功轨', 'h.tracksBadge':'方块爬到顶端 15 才有获胜资格', 'h.legend':'图例', 'h.legendTip':'横幅符号与高亮说明', 'h.score':'计分轨', 'h.scoreBadge':'有人到 50 分即触发终局', 'h.players':'玩家', 'h.ach':'成就', 'h.log':'记录',
+  'color.blue':'蓝·矿业', 'color.yellow':'黄·农业', 'color.orange':'橙·制造', 'color.pink':'粉·商贸', 'color.white':'白·教育',
+  'cs.blue':'蓝', 'cs.yellow':'黄', 'cs.orange':'橙', 'cs.pink':'粉', 'cs.white':'白',
+  'track.blue':'蓝·矿业', 'track.yellow':'黄·农业', 'track.orange':'橙·制造', 'track.pink':'粉·商贸', 'track.white':'白·教育',
+  'tracksub.blue':'', 'tracksub.yellow':'', 'tracksub.orange':'', 'tracksub.pink':'', 'tracksub.white':'',
+  'ci.blue':'蓝', 'ci.yellow':'黄', 'ci.orange':'橙', 'ci.pink':'粉', 'ci.white':'白',
+  'board.front':'正面（标准）', 'board.back':'背面（农夫板）',
+  'ft.vp2':'+2 分', 'ft.vp3':'+3 分', 'ft.adv':'推进任一方块 1 格', 'ft.envoy':'再来一回合', 'ft.herald':'移动一枚使者棋',
+  'glyph.herald':'使', 'glyph.ftHerald':'使→', 'glyph.seal':'印', 'glyph.start':'起', 'glyph.end':'终局', 'glyph.sealUp':'印章 +1',
+  'ach.a1':'五个方块都到第一横幅(4)', 'ach.a2':'手中持有 3 枚印章', 'ach.a3':'三个方块到第二横幅(10)', 'ach.a4':'一个群连接全部 5 色城镇', 'ach.a5':'一个方块到达顶端(15)', 'ach.a6':'一个群连接 3 座同色城镇',
+  'ach.pair':'一个群连接 2 座{cs}色城镇', 'ach.all':'五色连接全部达成',
+  'lv.0':'真人', 'lv.1':'电脑·简单', 'lv.2':'电脑·普通', 'lv.3':'电脑·困难', 'lv.short.1':'简', 'lv.short.2':'普', 'lv.short.3':'难',
+  'player_n':'玩家{n}', 'defaultBot':'电脑',
+  'end.vp':'有玩家达到 50 分', 'end.envoys':'使者用尽',
+  // —— 引擎日志 ——
+  'log.cubeTop':'{pn} 的{cs}方块已在顶端，推进被忽略',
+  'log.cubeBlocked':'{pn} 的{cs}方块被禁行格挡住，停留在 {pos}',
+  'log.cubeAdv':(a,d)=>`${a.pn} ${a.via==='chain'?'连锁推进：':a.via==='farmer'?'农夫推进：':''}${d['cs.'+a.c]}轨 ${a.from}→${a.to}`,
+  'log.cellVP':'　{cs}轨 {p} 格：+{gain} 分',
+  'log.cellExtra':'　{cs}轨 {p} 格：本回合结束后再来一回合 ⤴',
+  'log.advSkip':'　放弃推进',
+  'log.sealTake':'　{cs}轨 {p} 格：取得印章 ◉（手中 {n} 枚）',
+  'log.envoyMove':'　移动使者 {from} → {to}（不触发计分）',
+  'log.moveSkip':'　放弃移动',
+  'log.achUnique':(a,d)=>`🏅 ${a.pn} 达成独占成就「${d['ach.'+a.id]}」+3 分`,
+  'log.achPair':'🚩 {pn} 一个群连接 2 座{cs}色城镇 +2 分',
+  'log.achAll':'🏆 {pn} 五色连接成就全部达成 +10 分',
+  'log.farmer':'　🌾 农夫板块 {key}：{ft}',
+  'log.heraldNone':'　没有可移动的使者棋/目标',
+  'log.heraldMove':'　使者棋 {from} → {to}',
+  'log.heraldSkip':'　放弃移动使者棋',
+  'log.placeSeal':'{pn} 在 {key} 放置使者并压上印章 ◉',
+  'log.place':(a)=>`${a.pn} 在 ${a.key} 放置使者${a.single?'（单独）':'（成群 '+a.size+'）'}`,
+  'log.townScore':(a,d)=>`　触发 ${d['cs.'+a.c]}色城镇 ${a.town} 计分：${a.anyBefore?'非首位到访 +2':'首位到访 +1'}${a.herald?' +使者 1':''}`,
+  'log.gameOver':(a,d)=>`🎉 游戏结束（${d['end.'+a.reason]||a.reason}）。${a.minor?'无人达标，':''}胜者：${a.pn}`,
+  'log.noEnvoys':'{pn} 没有使者可放置',
+  'log.extraTurn':'⤴ {pn} 获得额外回合（剩余 {n}）',
+  'log.newGame':(a)=>`新游戏开始：${a.names.join('、')}；起始玩家 ${a.startPn}`,
+  'log.undoLocal':'↩ 撤销到本回合开始前',
+  'log.netStart':(a)=>`联机对局开始：${a.names.join('、')}；房间 ${a.code}`,
+  'log.undoReq':(a)=>`↩ ${a.nm} 请求撤销到自己上一手之前${a.wait?'，等待其他玩家同意':''}`,
+  'log.undoTimeout':'↩ 撤销请求超时未获同意，已取消',
+  'log.undoRefused':'↩ {nm} 拒绝了撤销请求',
+  'log.undoDone':'↩ 已撤销到 {nm} 的上一手之前',
+  // —— 决策提示 ——
+  'why.trackAdv':'{cs}轨 {p} 格触发「推进任一方块 1 格」',
+  'why.sealMove':'{cs}轨 {p} 格的印章已被取走，可将你的一枚使者移到相邻空格',
+  'why.farmerAdv':'农夫板块 {key} 触发「推进任一方块 1 格」',
+  'why.farmerHerald':'农夫板块 {key}：可将任一使者棋移到没有使者棋且至少有 1 个空邻格的城镇',
+  'opt.cube':(a,d)=>`${d['color.'+a.c]}：${a.pos} → ${a.blocked?(a.top?'已到顶':'被禁行格挡住'):a.to}`,
+  'modal.cubeTitle':'选择要推进 1 格的方块', 'modal.cubeCancel':'放弃推进',
+  // —— 状态栏 / 交互 ——
+  'status.place':(a)=>`轮到 ${a.pn}：请点击一个空格放置使者。${a.seals?'（手中有印章，单独落在城镇旁时可选择使用）':''}`,
+  'status.placeYou':(a)=>`轮到你：请点击一个空格放置使者。${a.seals?'（手中有印章，单独落在城镇旁时可选择使用）':''}`,
+  'status.move':(a)=>`${a.why}。先点击你的一枚使者，再点击相邻空格；或 <button onclick="UI.finish(null)">跳过</button>`,
+  'status.herald':(a)=>`${a.why}。${a.picked?'点击目标城镇（高亮）':'先点击要移动的使者棋，再点击目标城镇（高亮）'}；或 <button onclick="UI.finish(null)">跳过</button>`,
+  'status.bot':'{pn}（电脑）思考中…',
+  'status.farmerLocked':'农夫格 {k} 对你仍是上锁的：先在它旁边放一枚你的使者。',
+  'seal.title':'使用印章？', 'seal.sub':'你放在 {k} 的是一枚单独使者，旁边有城镇。压上一枚印章（手中 {n} 枚）即可触发计分。', 'seal.yes':'使用印章 ◉ 并计分', 'seal.no':'不用印章（不触发计分）',
+  'btn.cancel':'取消', 'btn.close':'关闭', 'btn.start':'开始', 'btn.again':'再来一局', 'btn.againRoom':'再来一局（回到房间）',
+  // —— 地图 / 轨道悬浮提示 ——
+  'town.title':(a,d)=>`${d['color.'+a.c]} 城镇 ${a.k}${a.lit?'（本回合触发计分）':''}`,
+  'farmer.title':(a,d)=>`农夫格 ${a.k}：${a.t?d['ft.'+a.t]:''}${a.unlocked?'（已为你解锁）':'（对你上锁：需先在相邻格放置使者）'}`,
+  'envoy.title':(a)=>`${a.name}${a.seal?'（压印章）':''}${a.isNew?' · 本回合放下':a.moved?' · 本回合移入':''}`,
+  'mapInfo':(a,d)=>`${d['board.'+a.board]||a.board} · 使者棋在 ${a.icon} 城镇 · 第 ${a.turn} 回合${a.rec?' · 📼 记录中':''}${a.room?' · 🌐 房间 '+a.room:''}`,
+  'cube.title':(a,d)=>`${a.name}：${d['cs.'+a.c]}轨 ${a.p}${a.from!==undefined?'（本回合 '+a.from+'→'+a.to+'）':''}`,
+  'score.title':(a)=>`${a.name}：${a.vp} 分${a.d?'（本回合 +'+a.d+'）':''}`,
+  'pl.envoys':'使者 {n}', 'pl.seals':'印章 {n}', 'pl.own':'{cs}轨 {p}/15',
+  'log.more':(a)=>`前面还有 ${a.n} 条记录 <b data-act="more">展开 ${a.m} 条</b>`, 'log.allShown':'更早的记录已全部展开', 'log.less':'收起',
+  // —— 结果 ——
+  'result.title':(a,d)=>`游戏结束 · ${d['end.'+a.reason]||a.reason}`,
+  'result.minor':'无人达到己色轨顶端，按小胜规则由最高分获胜。',
+  'result.row':(a)=>`${a.name} — ${a.vp} 分 ${a.qual?'（己色轨已到顶 ✅）':'（己色轨未到顶，无资格）'}`,
+  // —— 新游戏 ——
+  'ng.title':'新游戏', 'ng.n':'人数', 'ng.herald':'使者棋放在', 'ng.heraldStar':'★ 城镇（标准）', 'ng.heraldO':'● 城镇（变体）', 'ng.heraldX':'✖ 城镇（变体）',
+  'ng.board':'版图', 'ng.front':'正面（36 城，标准）', 'ng.back':'背面（26 城 + 24 农夫板块）',
+  'ng.tip':'提示：每位玩家颜色必须不同；玩家只有把<b>自己颜色</b>的方块推到顶端(15)才有获胜资格。', 'ng.colorDup':'玩家颜色不能重复',
+  // —— 规则摘要 / 图例 ——
+  'rules.title':'规则摘要',
+  'rules.body':`
+  <h4>回合</h4><ul><li>轮到你时，把 1 枚使者放到任意<b>空的田野格</b>（不能放城镇）。放完即结束回合，但可能触发城镇计分。</li></ul>
+  <h4>群与城镇计分</h4><ul><li><b>群</b>：≥2 枚同色使者相邻连通。单枚使者不是群。</li>
+  <li>把使者放在城镇旁时，若①它属于一个群，且②这个群在放置前<b>没有</b>其他成员与该城镇相邻（首次接触），则触发该城镇计分。多座相邻城镇各自判断。</li>
+  <li>单枚使者旁有城镇时，可压上一枚<b>印章</b>视同成群来触发计分。</li>
+  <li>计分：在对应颜色成功轨推进方块——你是第一个放到该城镇旁的使者（任何颜色）则 +1 格，否则 +2 格；城镇有<b>使者棋</b>再 +1 格。</li></ul>
+  <h4>成功轨动作</h4><ul><li>方块经过或停在有横幅的格子就触发（低格先结算）：分数（两数者先到取大）、▲ 推进任一方块 1 格（可连锁）、⤴ 本回合结束后再来一回合（永远最后执行）。</li>
+  <li>◉ 折叠格只在<b>正好停住</b>时生效：有印章则必须取走；印章已被人取走则可移动你的一枚使者到相邻空格（不触发计分）。</li>
+  <li>✕ 禁行格：不能停在上面，会停到其下方一格；只有 2/3 格的推进才能跃过。首次到达其下方格时触发该格动作。</li></ul>
+  <h4>成就</h4><ul><li>6 项独占成就各 +3 分（先达成者得）；每色「一个群连接 2 座同色城镇」+2 分（每人每色一次），五色全齐再 +10。</li></ul>
+  <h4>结束与胜负</h4><ul><li>任一回合结束时有人 ≥50 分，或有人该放使者却没有了，游戏结束。</li>
+  <li><b>只有自己颜色的方块到达顶端 (15) 的玩家有获胜资格</b>，其中分数最高者胜；无人达标则最高分小胜。平手由首轮中后行动者胜。</li></ul>
+  <h4>背面·农夫板</h4><ul><li>地图更少城镇（26 座），24 个绿色农夫格开局各盖一块面朝上的农夫板块。</li>
+  <li>农夫格是田野，但对你<b>上锁</b>：只有当你有一枚使者与它相邻时才对你解锁（🔒 虚线边=对当前玩家上锁），之后才能把使者放上去；使者一旦放上（或经「移动使者」移入），立即执行板块动作：+2/+3 分、▲推进任一方块 1 格、⤴再来一回合、或把任一使者棋移到没有使者棋且有空邻格的城镇。板块留在原地，搬走后可再次触发。</li>
+  <li>放在农夫格上的使者同样按普通规则判断是否触发相邻城镇计分。</li></ul>
+  <h4>本复刻未实现</h4><ul><li>「2 枚可移动使者棋」高级变体；同一次落子触发多城镇时按固定顺序结算。</li></ul>
+  `,
+  'legend.1':'<b>分数横幅 2｜1</b>：先到的方块得 2 分，之后到的得 1 分',
+  'legend.2':'<b>大数已被取走</b>：高亮切到小数，后来者只得 1 分',
+  'legend.3':'<b>分数横幅 3</b>：每个到达的方块各得 3 分',
+  'legend.4':'<b>▲ 推进</b>：任一颜色方块再进 1 格，可连锁',
+  'legend.5':'<b>⤴ 额外回合</b>：本回合结束后再来一回合',
+  'legend.6':'<b>印 折叠格</b>：方块正好停住才生效，取走印章',
+  'legend.7':'<b>◉ 印章已取</b>：停住可把你的一枚使者移到相邻空格',
+  'legend.8':'<b>✕ 禁行格</b>：不能停留，只能被 2/3 格推进跃过',
+  'legend.9':'<b>⚜ 成就横幅</b>：第 4/10/15 格，三项独占成就各 +3',
+  'legend.10':'<b>金色光环</b>：本回合刚动过的棋子；虚影 = 移动前位置',
+  // —— 联机 ——
+  'net.connFail':'连接服务器失败', 'net.reconnecting':'🔌 连接断开，正在重连…', 'net.left':'已离开联机房间。点「联机」重新加入，或点「新游戏」在本机开一局。',
+  'kind.place':'放置使者', 'kind.cube':'选择要推进的方块', 'kind.move':'移动使者', 'kind.herald':'移动使者棋',
+  'net.lobby':'🌐 房间 {code}：在大厅里坐下，等房主开始。',
+  'net.ended':(a)=>`🎉 对局结束。${a.owner?'点「再来一局」回到房间重新配置。':'等房主重开。'}`,
+  'net.undoMine':'↩ 已请求撤销，等待其他玩家同意（{a}/{b}）',
+  'undo.title':'撤销请求', 'undo.ask':'{nm} 想撤销到自己上一手之前，这会同时回退之后所有人的行动。同意吗？', 'undo.yes':'同意撤销', 'undo.no':'拒绝',
+  'net.undoOther':'↩ {nm} 请求撤销，等待其他玩家表决…',
+  'net.moving':'{nm} 行动中…', 'net.waiting':'等待中…',
+  'net.waitFor':(a,d)=>`等待 ${a.nm} ${d['kind.'+a.kind]||''}…${a.spect?'（你在旁观）':''}`,
+  'net.submitted':'已提交，等待服务器确认…',
+  'lobby.title':'联机房间 {code}', 'lobby.link':'邀请链接', 'lobby.copy':'复制', 'lobby.copied':'已复制',
+  'lobby.manual':(a)=>`朋友也可以在「联机 → 加入房间」手动输入：房间码 <b>${a.code}</b>，配对码 <b>${a.pin}</b>${a.n>1?`。当前在线 ${a.n} 人`:''}`,
+  'lobby.sitePin':'没有邀请链接的朋友进站点要先输入站点配对码：<b>{pin}</b>（只有房主能看到）',
+  'lobby.n':'人数', 'lobby.board':'版图', 'lobby.herald':'使者棋', 'lobby.heraldStar':'★ 城镇（标准）', 'lobby.heraldO':'● 城镇', 'lobby.heraldX':'✖ 城镇',
+  'lobby.summary':(a)=>`${a.n} 人 · ${a.board==='back'?'背面农夫板':'正面标准版图'} · 使者棋在 ${a.icon} 城镇（房主设置）`,
+  'lobby.name':'我的昵称', 'lobby.namePh':'坐下前先填', 'lobby.me':'（我）', 'lobby.offline':'离线', 'lobby.stand':'起身', 'lobby.sit':'坐这里', 'lobby.start':'开始对局', 'lobby.waitHost':'等房主开始…', 'lobby.leave':'离开房间',
+  'on.title':'联机', 'on.join':'加入房间', 'on.roomPh':'房间码', 'on.pinPh':'配对码', 'on.joinBtn':'加入', 'on.linkHint':'拿到邀请链接的话直接打开链接即可，不用手填。',
+  'on.create':'创建房间（房主）', 'on.ownerPh':'房主口令', 'on.createBtn':'创建房间', 'on.offline':'不联机', 'on.local':'本机新游戏（和电脑或同屏朋友玩）',
+  'ver.new':'⚠️ <b class="newver">页面有新版本</b>（AI/功能已更新），请在本回合结束后刷新页面。',
+  'boot.connecting':'正在连接房间…', 'boot.reconnecting':'正在重新连接上次的房间…', 'boot.online':'点「联机」加入朋友的房间；也可以点「新游戏」在本机和电脑玩。', 'boot.local':'点击右上角「新游戏」开始。',
+  // —— 服务器（经 engine.js 使用）——
+  'gate.title':'卡斯卡德罗 · Cascadero', 'gate.h1':'卡斯卡德罗', 'gate.p':'私人对局站点。请输入朋友告诉你的配对码。', 'gate.ph':'配对码', 'gate.enter':'进入', 'gate.hint':'如果收到的是邀请链接，直接打开链接即可，不需要配对码。', 'gate.checking':'验证中…', 'gate.netErr':'网络出错，请重试',
+  'err.tooMany':'尝试太多次，请 1 分钟后再试', 'err.ownerPin':'房主口令不对', 'err.roomsFull':'房间数已达上限（CASC_MAX_ROOMS），请稍后再试', 'err.roomPin':'房间不存在或配对码不对', 'err.sitePin':'配对码不对', 'err.badInvite':'邀请链接无效或已过期，可改用配对码进入',
+  'err.noRoom':'还没进入房间', 'err.started':'对局已开始', 'err.startedSeat':'对局已开始，不能换座', 'err.seatNA':'这个座位不能坐', 'err.seatTaken':'座位已有人', 'err.ownerCfg':'只有房主能改设置', 'err.ownerStart':'只有房主能开始', 'err.colorDup':'玩家颜色不能重复', 'err.seatEmpty':'第 {n} 个座位还没人坐（或改成电脑）', 'err.notYourTurn':'还没轮到你', 'err.illegal':'这一步不合法，请重新选择', 'err.spectUndo':'旁观者不能撤销', 'err.ownerRestart':'只有房主能重开', 'err.unknown':'未知消息',
+  'err.undoNow':'现在不能撤销', 'err.undoPending':'已有撤销请求在等待表决', 'err.undoNone':'你还没有可撤销的回合', 'err.rate':'消息太频繁', 'err.connFull':'在线人数已达上限', 'err.authExpired':'授权已过期，请刷新页面重新输入配对码', 'err.noId':'缺少身份', 'err.server':'服务器处理出错',
+};
+I18N.en={
+  'title':'Cascadero', 'h1':'Cascadero',
+  'btn.online':'Online', 'btn.onlineTip':'Play with friends over the internet', 'btn.undo':'Undo', 'btn.undoTip':'Undo to before the last placement', 'btn.rules':'Rules', 'btn.new':'New game',
+  'h.map':'Map', 'h.tracks':'Success tracks', 'h.tracksBadge':'only a cube at the top (15) qualifies you to win', 'h.legend':'Legend', 'h.legendTip':'Banner symbols and highlights', 'h.score':'Score track', 'h.scoreBadge':'the game ends once someone reaches 50 VP', 'h.players':'Players', 'h.ach':'Achievements', 'h.log':'Log',
+  'color.blue':'Blue · Mining', 'color.yellow':'Yellow · Farming', 'color.orange':'Orange · Crafts', 'color.pink':'Pink · Trade', 'color.white':'White · Learning',
+  'cs.blue':'blue', 'cs.yellow':'yellow', 'cs.orange':'orange', 'cs.pink':'pink', 'cs.white':'white',
+  'track.blue':'Blue', 'track.yellow':'Yellow', 'track.orange':'Orange', 'track.pink':'Pink', 'track.white':'White',
+  'tracksub.blue':'MINING', 'tracksub.yellow':'FARMING', 'tracksub.orange':'CRAFTS', 'tracksub.pink':'TRADE', 'tracksub.white':'LEARNING',
+  'ci.blue':'B', 'ci.yellow':'Y', 'ci.orange':'O', 'ci.pink':'P', 'ci.white':'W',
+  'board.front':'Front (standard)', 'board.back':'Back (farmer board)',
+  'ft.vp2':'+2 VP', 'ft.vp3':'+3 VP', 'ft.adv':'advance any cube 1 space', 'ft.envoy':'extra turn', 'ft.herald':'move a herald',
+  'glyph.herald':'H', 'glyph.ftHerald':'H→', 'glyph.seal':'S', 'glyph.start':'0', 'glyph.end':'END', 'glyph.sealUp':'seal +1',
+  'ach.a1':'All five cubes on the first banner (4)', 'ach.a2':'Hold 3 seals', 'ach.a3':'Three cubes on the second banner (10)', 'ach.a4':'One group linked to towns of all 5 colours', 'ach.a5':'A cube reaches the top (15)', 'ach.a6':'One group linked to 3 towns of one colour',
+  'ach.pair':'A group links 2 {cs} towns', 'ach.all':'All five colours linked',
+  'lv.0':'Human', 'lv.1':'Bot · easy', 'lv.2':'Bot · normal', 'lv.3':'Bot · hard', 'lv.short.1':' easy', 'lv.short.2':' normal', 'lv.short.3':' hard',
+  'player_n':'Player {n}', 'defaultBot':'Bot',
+  'end.vp':'a player reached 50 VP', 'end.envoys':'out of envoys',
+  // —— engine log ——
+  'log.cubeTop':"{pn}'s {cs} cube is already at the top; the advance is ignored",
+  'log.cubeBlocked':"{pn}'s {cs} cube is stopped by a barrier and stays at {pos}",
+  'log.cubeAdv':(a,d)=>`${a.pn} ${a.via==='chain'?'chain advance: ':a.via==='farmer'?'farmer advance: ':''}${d['cs.'+a.c]} track ${a.from}→${a.to}`,
+  'log.cellVP':'　{cs} track {p}: +{gain} VP',
+  'log.cellExtra':'　{cs} track {p}: extra turn after this one ⤴',
+  'log.advSkip':'　advance declined',
+  'log.sealTake':'　{cs} track {p}: seal taken ◉ ({n} in hand)',
+  'log.envoyMove':'　envoy moved {from} → {to} (no scoring)',
+  'log.moveSkip':'　move declined',
+  'log.achUnique':(a,d)=>`🏅 ${a.pn} claims the unique achievement "${d['ach.'+a.id]}" +3 VP`,
+  'log.achPair':'🚩 {pn}: a group links 2 {cs} towns, +2 VP',
+  'log.achAll':'🏆 {pn} has linked pairs of all five colours, +10 VP',
+  'log.farmer':'　🌾 farmer tile {key}: {ft}',
+  'log.heraldNone':'　no herald or target town available',
+  'log.heraldMove':'　herald {from} → {to}',
+  'log.heraldSkip':'　herald move declined',
+  'log.placeSeal':'{pn} places an envoy at {key} with a seal ◉',
+  'log.place':(a)=>`${a.pn} places an envoy at ${a.key} ${a.single?'(alone)':'(group of '+a.size+')'}`,
+  'log.townScore':(a,d)=>`　${d['cs.'+a.c]} town ${a.town} scores: ${a.anyBefore?'not the first visitor +2':'first visitor +1'}${a.herald?' +1 herald':''}`,
+  'log.gameOver':(a,d)=>`🎉 Game over (${d['end.'+a.reason]||a.reason}). ${a.minor?'Nobody qualified; ':''}winner: ${a.pn}`,
+  'log.noEnvoys':'{pn} has no envoys left to place',
+  'log.extraTurn':'⤴ {pn} takes an extra turn ({n} more banked)',
+  'log.newGame':(a)=>`New game: ${a.names.join(', ')}; first player ${a.startPn}`,
+  'log.undoLocal':'↩ Undone to the start of this turn',
+  'log.netStart':(a)=>`Online game started: ${a.names.join(', ')}; room ${a.code}`,
+  'log.undoReq':(a)=>`↩ ${a.nm} asks to undo to before their last move${a.wait?', waiting for the other players':''}`,
+  'log.undoTimeout':'↩ Undo request timed out without approval; cancelled',
+  'log.undoRefused':'↩ {nm} refused the undo request',
+  'log.undoDone':"↩ Undone to before {nm}'s last move",
+  // —— decision prompts ——
+  'why.trackAdv':'{cs} track {p}: advance any cube 1 space',
+  'why.sealMove':'The seal on {cs} track {p} is already gone; you may move one of your envoys to an adjacent empty field',
+  'why.farmerAdv':'Farmer tile {key}: advance any cube 1 space',
+  'why.farmerHerald':'Farmer tile {key}: move any herald to a town that has no herald and at least 1 empty neighbouring field',
+  'opt.cube':(a,d)=>`${d['color.'+a.c]}: ${a.pos} → ${a.blocked?(a.top?'at the top':'blocked by a barrier'):a.to}`,
+  'modal.cubeTitle':'Choose a cube to advance 1 space', 'modal.cubeCancel':"Don't advance",
+  // —— status bar / interaction ——
+  'status.place':(a)=>`${a.pn} to move: click an empty field to place an envoy.${a.seals?' (You hold a seal: a lone envoy next to a town may use it.)':''}`,
+  'status.placeYou':(a)=>`Your turn: click an empty field to place an envoy.${a.seals?' (You hold a seal: a lone envoy next to a town may use it.)':''}`,
+  'status.move':(a)=>`${a.why}. Click one of your envoys, then an adjacent empty field, or <button onclick="UI.finish(null)">skip</button>`,
+  'status.herald':(a)=>`${a.why}. ${a.picked?'Click a highlighted target town':'Click the herald to move, then a highlighted target town'}, or <button onclick="UI.finish(null)">skip</button>`,
+  'status.bot':'{pn} (bot) is thinking…',
+  'status.farmerLocked':'Farmer slot {k} is still locked for you: place one of your envoys next to it first.',
+  'seal.title':'Use a seal?', 'seal.sub':'Your envoy at {k} stands alone next to a town. Adding a seal ({n} in hand) lets it score.', 'seal.yes':'Use a seal ◉ and score', 'seal.no':'No seal (no scoring)',
+  'btn.cancel':'Cancel', 'btn.close':'Close', 'btn.start':'Start', 'btn.again':'Play again', 'btn.againRoom':'Play again (back to the room)',
+  // —— map / track tooltips ——
+  'town.title':(a,d)=>`${d['color.'+a.c]} town ${a.k}${a.lit?' (scored this turn)':''}`,
+  'farmer.title':(a,d)=>`Farmer slot ${a.k}: ${a.t?d['ft.'+a.t]:''}${a.unlocked?' (unlocked for you)':' (locked for you: place an envoy next to it first)'}`,
+  'envoy.title':(a)=>`${a.name}${a.seal?' (with seal)':''}${a.isNew?' · placed this turn':a.moved?' · moved here this turn':''}`,
+  'mapInfo':(a,d)=>`${d['board.'+a.board]||a.board} · heralds on ${a.icon} towns · turn ${a.turn}${a.rec?' · 📼 recording':''}${a.room?' · 🌐 room '+a.room:''}`,
+  'cube.title':(a,d)=>`${a.name}: ${d['cs.'+a.c]} track ${a.p}${a.from!==undefined?' (this turn '+a.from+'→'+a.to+')':''}`,
+  'score.title':(a)=>`${a.name}: ${a.vp} VP${a.d?' (+'+a.d+' this turn)':''}`,
+  'pl.envoys':'Envoys {n}', 'pl.seals':'Seals {n}', 'pl.own':(a,d)=>{ const s=d['cs.'+a.c]; return s.charAt(0).toUpperCase()+s.slice(1)+' '+a.p+'/15'; },
+  'log.more':(a)=>`${a.n} earlier entries <b data-act="more">show ${a.m} more</b>`, 'log.allShown':'all earlier entries shown', 'log.less':'collapse',
+  // —— result ——
+  'result.title':(a,d)=>`Game over · ${d['end.'+a.reason]||a.reason}`,
+  'result.minor':'Nobody reached the top of their own track; the highest score takes a minor win.',
+  'result.row':(a)=>`${a.name} — ${a.vp} VP ${a.qual?'(own track at the top ✅)':'(own track not at the top, not qualified)'}`,
+  // —— new game ——
+  'ng.title':'New game', 'ng.n':'Players', 'ng.herald':'Heralds on', 'ng.heraldStar':'★ towns (standard)', 'ng.heraldO':'● towns (variant)', 'ng.heraldX':'✖ towns (variant)',
+  'ng.board':'Board', 'ng.front':'Front (36 towns, standard)', 'ng.back':'Back (26 towns + 24 farmer tiles)',
+  'ng.tip':'Tip: every player needs a different colour. You only qualify to win once the cube of <b>your own colour</b> reaches the top (15).', 'ng.colorDup':'Player colours must be different',
+  // —— rules summary / legend ——
+  'rules.title':'Rules summary',
+  'rules.body':`
+  <h4>Turn</h4><ul><li>On your turn, place 1 envoy on any <b>empty field</b> (never on a town). That ends your turn, but it may trigger town scoring.</li></ul>
+  <h4>Groups and town scoring</h4><ul><li><b>Group</b>: 2 or more of your envoys connected through adjacent fields. A single envoy is not a group.</li>
+  <li>When you place an envoy next to a town, that town scores if ① the envoy belongs to a group and ② before this placement <b>no</b> other member of that group was adjacent to the town (first contact). Each adjacent town is checked separately.</li>
+  <li>A lone envoy next to a town may carry a <b>seal</b>; it then counts as a group and triggers scoring.</li>
+  <li>Scoring: advance your cube on the success track of the town's colour: +1 space if you are the first player with an envoy next to that town (any colour counts), otherwise +2; +1 more if the town holds a <b>herald</b>.</li></ul>
+  <h4>Success-track actions</h4><ul><li>A cube triggers every banner it passes or stops on (lowest space first): points (on a two-number banner the first cube takes the larger one), ▲ advance any cube 1 space (may chain), ⤴ an extra turn after this one (always resolved last).</li>
+  <li>◉ Seal spaces only work when the cube <b>stops exactly there</b>: if the seal is still there you must take it; if someone already took it you may move one of your envoys to an adjacent empty field (no scoring).</li>
+  <li>✕ Barrier: a cube may not stop on it and halts one space below; only a 2- or 3-space advance can jump over it. The space below triggers its action the first time you arrive there.</li></ul>
+  <h4>Achievements</h4><ul><li>6 unique achievements worth +3 each (first to reach it takes it). For each colour, "a group links 2 towns of that colour" pays +2 (once per player per colour), and having all five colours pays another +10.</li></ul>
+  <h4>End and winner</h4><ul><li>The game ends when a player has ≥50 VP at the end of any turn, or when a player has to place an envoy but has none left.</li>
+  <li><b>Only players whose own-colour cube has reached the top (15) qualify to win</b>; among them the highest score wins. If nobody qualifies, the highest score takes a minor win. Ties go to the player who acted later in the first round.</li></ul>
+  <h4>Back side · farmer board</h4><ul><li>Fewer towns (26); 24 green farmer slots each start with a face-up farmer tile.</li>
+  <li>A farmer slot is a field, but it is <b>locked</b> for you until one of your envoys is adjacent to it (🔒 dashed edge = locked for the current player). As soon as an envoy lands on it (placed, or moved in through "move an envoy") the tile resolves: +2/+3 VP, ▲ advance any cube 1 space, ⤴ an extra turn, or move any herald to a town without a herald that has an empty neighbouring field. The tile stays where it is and can trigger again after the envoy moves away.</li>
+  <li>An envoy on a farmer slot scores adjacent towns by the normal rules.</li></ul>
+  <h4>Not implemented in this version</h4><ul><li>The "2 movable heralds" advanced variant; when one placement scores several towns they resolve in a fixed order.</li></ul>
+  `,
+  'legend.1':'<b>Points banner 2|1</b>: the first cube to arrive scores 2, later cubes score 1',
+  'legend.2':'<b>Big number taken</b>: the highlight moves to the small number; later cubes score only 1',
+  'legend.3':'<b>Points banner 3</b>: every cube that arrives scores 3',
+  'legend.4':'<b>▲ Advance</b>: move any cube 1 more space; can chain',
+  'legend.5':'<b>⤴ Extra turn</b>: take another turn after this one',
+  'legend.6':'<b>S Seal space</b>: only when the cube stops exactly here; take the seal',
+  'legend.7':'<b>◉ Seal gone</b>: stopping here lets you move one of your envoys to an adjacent empty field',
+  'legend.8':'<b>✕ Barrier</b>: cubes cannot stop here; only a 2- or 3-space advance jumps over it',
+  'legend.9':'<b>⚜ Achievement banner</b>: spaces 4/10/15; three unique achievements worth +3 each',
+  'legend.10':'<b>Gold ring</b>: a piece that moved this turn; the ghost marks where it came from',
+  // —— online ——
+  'net.connFail':'Could not connect to the server', 'net.reconnecting':'🔌 Connection lost, reconnecting…', 'net.left':'Left the online room. Click "Online" to rejoin, or "New game" to play locally.',
+  'kind.place':'place an envoy', 'kind.cube':'choose a cube to advance', 'kind.move':'move an envoy', 'kind.herald':'move a herald',
+  'net.lobby':'🌐 Room {code}: take a seat in the lobby and wait for the host to start.',
+  'net.ended':(a)=>`🎉 Game over. ${a.owner?'Click "Play again" to return to the room and set up a new game.':'Waiting for the host to restart.'}`,
+  'net.undoMine':'↩ Undo requested, waiting for the other players ({a}/{b})',
+  'undo.title':'Undo request', 'undo.ask':"{nm} wants to undo to before their last move. Everyone's moves since then will be rolled back too. Agree?", 'undo.yes':'Allow undo', 'undo.no':'Refuse',
+  'net.undoOther':'↩ {nm} requested an undo, waiting for the vote…',
+  'net.moving':'{nm} is moving…', 'net.waiting':'Waiting…',
+  'net.waitFor':(a,d)=>`Waiting for ${a.nm} to ${d['kind.'+a.kind]||'move'}…${a.spect?' (you are spectating)':''}`,
+  'net.submitted':'Submitted, waiting for the server…',
+  'lobby.title':'Online room {code}', 'lobby.link':'Invite link', 'lobby.copy':'Copy', 'lobby.copied':'Copied',
+  'lobby.manual':(a)=>`Friends can also join by hand under "Online → Join a room": room code <b>${a.code}</b>, PIN <b>${a.pin}</b>${a.n>1?`. ${a.n} online now`:''}`,
+  'lobby.sitePin':'Friends without an invite link must first enter the site PIN: <b>{pin}</b> (only the host can see this)',
+  'lobby.n':'Players', 'lobby.board':'Board', 'lobby.herald':'Heralds', 'lobby.heraldStar':'★ towns (standard)', 'lobby.heraldO':'● towns', 'lobby.heraldX':'✖ towns',
+  'lobby.summary':(a)=>`${a.n} players · ${a.board==='back'?'back board (farmers)':'front board (standard)'} · heralds on ${a.icon} towns (set by the host)`,
+  'lobby.name':'My name', 'lobby.namePh':'fill in before sitting', 'lobby.me':' (me)', 'lobby.offline':'offline', 'lobby.stand':'Stand up', 'lobby.sit':'Sit here', 'lobby.start':'Start game', 'lobby.waitHost':'Waiting for the host to start…', 'lobby.leave':'Leave room',
+  'on.title':'Online', 'on.join':'Join a room', 'on.roomPh':'Room code', 'on.pinPh':'PIN', 'on.joinBtn':'Join', 'on.linkHint':'If you have an invite link, just open it; nothing to type.',
+  'on.create':'Create a room (host)', 'on.ownerPh':'Host password', 'on.createBtn':'Create room', 'on.offline':'Play offline', 'on.local':'New local game (vs bots or hot-seat)',
+  'ver.new':'⚠️ <b class="newver">A new version is available</b> (AI/features updated). Please reload the page after this turn.',
+  'boot.connecting':'Connecting to the room…', 'boot.reconnecting':'Reconnecting to your last room…', 'boot.online':'Click "Online" to join a friend\'s room, or "New game" to play locally against bots.', 'boot.local':'Click "New game" in the top-right corner to start.',
+  // —— server (used through engine.js) ——
+  'gate.title':'Cascadero', 'gate.h1':'Cascadero', 'gate.p':'Private table. Enter the PIN your friend gave you.', 'gate.ph':'PIN', 'gate.enter':'Enter', 'gate.hint':'If you received an invite link, just open it; no PIN needed.', 'gate.checking':'Checking…', 'gate.netErr':'Network error, please try again',
+  'err.tooMany':'Too many attempts, try again in a minute', 'err.ownerPin':'Wrong host password', 'err.roomsFull':'Room limit reached (CASC_MAX_ROOMS), try again later', 'err.roomPin':'No such room, or wrong PIN', 'err.sitePin':'Wrong PIN', 'err.badInvite':'Invite link invalid or expired; enter the site PIN instead',
+  'err.noRoom':'Not in a room yet', 'err.started':'The game has already started', 'err.startedSeat':'The game has started; seats can no longer change', 'err.seatNA':'That seat cannot be taken', 'err.seatTaken':'Seat already taken', 'err.ownerCfg':'Only the host can change the settings', 'err.ownerStart':'Only the host can start', 'err.colorDup':'Player colours must be different', 'err.seatEmpty':'Seat {n} is still empty (or switch it to a bot)', 'err.notYourTurn':"It's not your turn", 'err.illegal':'That move is not legal, choose again', 'err.spectUndo':'Spectators cannot undo', 'err.ownerRestart':'Only the host can restart', 'err.unknown':'Unknown message',
+  'err.undoNow':'Cannot undo right now', 'err.undoPending':'An undo request is already waiting for votes', 'err.undoNone':'You have no turn to undo yet', 'err.rate':'Too many messages', 'err.connFull':'Connection limit reached', 'err.authExpired':'Authorisation expired; reload the page and enter the site PIN again', 'err.noId':'Missing identity', 'err.server':'Server error',
+};
+let LANG='zh';
+function setLang(l){ LANG=I18N[l]?l:'zh'; return LANG; }
+function tr(key, a, lang){
+  const L=(lang&&I18N[lang])?lang:LANG; let d=I18N[L]; let s=d[key]; if (s===undefined){ d=I18N.zh; s=d[key]; } if (s===undefined) return key;
+  if (typeof s==='function') return s(a||{}, d);
+  if (!a) return s;
+  return s.replace(/\{(\w+)\}/g,(m,k)=>{ if (k==='C') return d['color.'+a.c]; if (k==='cs') return d['cs.'+a.c]; if (k==='ft') return d['ft.'+a.t]; return a[k]!==undefined?a[k]:m; });
+}
 const PLAYER_COLORS = ['blue','yellow','orange','pink'];
 const TRACK_COLORS = ['blue','yellow','orange','pink','white'];
 // 城镇：列,行,颜色,图标('' | 'star' | 'o' | 'x')  —— 依据官方版图抄录（正面 36 城；背面 26 城 + 24 农夫位）
@@ -228,22 +514,14 @@ const BOARDS = {
 };
 // 24 块农夫板块（依官方示例图清点）：2 分×5、3 分×5、推进×5、额外回合×4、移动使者棋×5
 const FARMER_TILES = [].concat(Array(5).fill('vp2'),Array(5).fill('vp3'),Array(5).fill('adv'),Array(4).fill('envoy'),Array(5).fill('herald'));
-const FT_NAME = {vp2:'+2 分',vp3:'+3 分',adv:'推进任一方块 1 格',envoy:'再来一回合',herald:'移动一枚使者棋'};
-const FT_GLYPH = {vp2:'2',vp3:'3',adv:'▲',envoy:'⤴',herald:'使→'};
+const FT_GLYPH = {vp2:'2',vp3:'3',adv:'▲',envoy:'⤴'};   // herald 的字形随语言（tr('glyph.ftHerald')）；板块名见词典 ft.*
 const ICON = {star:'★', o:'●', x:'✖', '':''};
 // 成功轨：位置 0=起点 … 15=顶端
 const TRACK_COLORED = {2:{vp:[2,1]},3:{seal:1},4:{adv:1,ach:1},5:{x:1},6:{vp:[3,2]},7:{envoy:1},8:{seal:1},10:{adv:1,ach:2},11:{x:1},12:{vp:[3]},13:{envoy:1},15:{vp:[3],ach:3}};
 const TRACK_WHITE   = {2:{vp:[2,1]},3:{seal:1},4:{envoy:1,ach:1},5:{x:1},6:{vp:[3,2]},7:{seal:1},9:{seal:1},10:{envoy:1,ach:2},11:{x:1},12:{vp:[3]},13:{seal:1},15:{vp:[3],ach:3}};
 const TOP = 15;
 const trackDef = c => c==='white' ? TRACK_WHITE : TRACK_COLORED;
-const UNIQUE_ACH = [
- {id:'a1', name:'五个方块都到第一横幅(4)'},
- {id:'a2', name:'手中持有 3 枚印章'},
- {id:'a3', name:'三个方块到第二横幅(10)'},
- {id:'a4', name:'一个群连接全部 5 色城镇'},
- {id:'a5', name:'一个方块到达顶端(15)'},
- {id:'a6', name:'一个群连接 3 座同色城镇'},
-];
+const UNIQUE_ACH = ['a1','a2','a3','a4','a5','a6'].map(id=>({id}));   // 名称见词典 ach.a1…a6
 
 // 格子与邻接（随所选版图重建）
 let BOARD_ID='front', CELLS=[], CELLSET=new Set(), TOWN={}, FIELDS=[], NB={}, TOWN_FIELDS={}, FIELD_TOWNS={}, FIELD_FIELDS={}, FARMER=new Set();
@@ -272,6 +550,8 @@ setBoard('front');
 function farmerUnlocked(st, key, pi){ return NB[key].some(n=>st.board[n] && st.board[n].p===pi); }
 function legalFields(st, pi){ return FIELDS.filter(k=>!st.board[k] && (!FARMER.has(k) || farmerUnlocked(st,k,pi))); }
 function heraldTargets(st){ return Object.keys(TOWN).filter(t=>!st.heralds.includes(t) && TOWN_FIELDS[t].some(f=>!st.board[f])); }
+// 「推进任一方块」的候选（语言无关；界面用 tr('opt.cube',o) 出文字；服务器直接下发给客户端）
+function cubeOptions(st, pi){ const pl=P(st,pi); return TRACK_COLORS.map(c=>{ const pos=pl.cubes[c]; const def=trackDef(c); const top=pos>=TOP; const blocked=top||!!(def[pos+1]&&def[pos+1].x); return {value:c, c, pos, to:pos+1, top, blocked}; }); }
 
 /* =====================  状态  ===================== */
 let S = null;          // 当前状态（可 JSON 序列化）
@@ -296,7 +576,8 @@ function newState(cfg){
     turn:{player:start, extra:0, num:1}, start, ended:false, result:null, log:[], heraldIcon:cfg.herald, boardId:BOARD_ID, farmerTiles, fx:[], fxSeq:0, seed:Date.now()};
 }
 const clone = o => JSON.parse(JSON.stringify(o));
-function log(st, msg, cls){ st.log.push({m:msg,c:cls||''}); if (st.log.length>400) st.log.shift(); }
+function log(st, key, a, cls){ const e={m:tr(key,a), k:key, c:cls||''}; if (a) e.a=a; st.log.push(e); if (st.log.length>400) st.log.shift(); }   // k/a 供界面按语言重渲染；m 为写入时语言的缓存
+const logText=l=>l.k?tr(l.k,l.a):(l.m||'');
 const P = (st,i)=>st.players[i];
 // 动效事件流：只在真实对局状态上记录（fastClone 出的模拟状态没有 fx 字段，自动跳过），UI 据此做放子/爬轨动画
 function fxEmit(st,e){ if(!st.fx) return; e.n=st.fxSeq=(st.fxSeq||0)+1; e.turn=st.turn.num; st.fx.push(e); if(st.fx.length>80) st.fx.shift(); }
@@ -332,15 +613,15 @@ function canUseSealHere(st, key, pi){
   return evalPlacement(st,key,pi,true).scorings.length>0;
 }
 // 推进方块 n 格；返回 landed 位置。ctx 收集 extra turns
-async function advanceCube(st, pi, color, n, ctx, decide, why){
+async function advanceCube(st, pi, color, n, ctx, decide, via){
   const pl=P(st,pi); const def=trackDef(color); let pos=pl.cubes[color];
-  if (pos>=TOP) { log(st, `${pname(st,pi)} 的${CSHORT[color]}方块已在顶端，推进被忽略`); return pos; }
+  if (pos>=TOP) { log(st, 'log.cubeTop', {pn:pname(st,pi), c:color}); return pos; }
   let target=Math.min(TOP,pos+n);
   if (def[target] && def[target].x) target=target-1;      // 禁行格：停在下方
-  if (target<=pos) { log(st, `${pname(st,pi)} 的${CSHORT[color]}方块被禁行格挡住，停留在 ${pos}`); return pos; }
+  if (target<=pos) { log(st, 'log.cubeBlocked', {pn:pname(st,pi), c:color, pos}); return pos; }
   const passed=[]; for(let p=pos+1;p<=target;p++) passed.push(p);
   pl.cubes[color]=target; fxEmit(st,{t:'cube',p:pi,c:color,from:pos,to:target});
-  log(st, `${pname(st,pi)} ${why||''}${CSHORT[color]}轨 ${pos}→${target}`);
+  log(st, 'log.cubeAdv', {pn:pname(st,pi), via:via||'', c:color, from:pos, to:target});
   // 依次结算经过/停留格的动作（低→高）
   for (const p of passed){
     const sp=def[p]; if(!sp) continue;
@@ -348,23 +629,23 @@ async function advanceCube(st, pi, color, n, ctx, decide, why){
       let gain;
       if (sp.vp.length>1){ const first=!st.tracks[color].firstVP[p]; if(first) st.tracks[color].firstVP[p]=true; gain=first?sp.vp[0]:sp.vp[1]; }
       else gain=sp.vp[0];
-      gainVP(st,pi,gain); log(st, `　${CSHORT[color]}轨 ${p} 格：+${gain} 分`);
+      gainVP(st,pi,gain); log(st, 'log.cellVP', {c:color, p, gain});
     }
-    if (sp.envoy){ ctx.extra++; log(st, `　${CSHORT[color]}轨 ${p} 格：本回合结束后再来一回合 ⤴`); }
+    if (sp.envoy){ ctx.extra++; log(st, 'log.cellExtra', {c:color, p}); }
     if (sp.adv){
       await checkAchievements(st, pi);
-      const c2 = await decide.chooseCube(st, pi, `${CSHORT[color]}轨 ${p} 格触发「推进任一方块 1 格」`); ensureBoard(st);
-      if (c2){ await advanceCube(st, pi, c2, 1, ctx, decide, '连锁推进：'); ensureBoard(st); }
-      else log(st, `　放弃推进`);
+      const c2 = await decide.chooseCube(st, pi, {k:'why.trackAdv', a:{c:color, p}}); ensureBoard(st);
+      if (c2){ await advanceCube(st, pi, c2, 1, ctx, decide, 'chain'); ensureBoard(st); }
+      else log(st, 'log.advSkip');
     }
     if (sp.seal && p===target){       // 折叠格只在停留时生效
-      if (!st.tracks[color].sealTaken[p]){ st.tracks[color].sealTaken[p]=true; pl.seals++; fxEmit(st,{t:'seal',p:pi,c:color,pos:p}); log(st, `　${CSHORT[color]}轨 ${p} 格：取得印章 ◉（手中 ${pl.seals} 枚）`); }
+      if (!st.tracks[color].sealTaken[p]){ st.tracks[color].sealTaken[p]=true; pl.seals++; fxEmit(st,{t:'seal',p:pi,c:color,pos:p}); log(st, 'log.sealTake', {c:color, p, n:pl.seals}); }
       else {
         await checkAchievements(st, pi);
-        const mv = await decide.chooseMove(st, pi, `${CSHORT[color]}轨 ${p} 格的印章已被取走，可将你的一枚使者移到相邻空格`); ensureBoard(st);
-        if (mv){ const e=st.board[mv.from]; delete st.board[mv.from]; st.board[mv.to]=e; fxEmit(st,{t:'move',p:pi,from:mv.from,to:mv.to}); log(st, `　移动使者 ${mv.from} → ${mv.to}（不触发计分）`);
+        const mv = await decide.chooseMove(st, pi, {k:'why.sealMove', a:{c:color, p}}); ensureBoard(st);
+        if (mv){ const e=st.board[mv.from]; delete st.board[mv.from]; st.board[mv.to]=e; fxEmit(st,{t:'move',p:pi,from:mv.from,to:mv.to}); log(st, 'log.envoyMove', {from:mv.from, to:mv.to});
           if (FARMER.has(mv.to)){ await farmerAction(st, pi, mv.to, ctx, decide); ensureBoard(st); } }
-        else log(st, `　放弃移动`);
+        else log(st, 'log.moveSkip');
       }
     }
     await checkAchievements(st, pi);
@@ -374,37 +655,37 @@ async function advanceCube(st, pi, color, n, ctx, decide, why){
 function groupTownColors(st, grp){ const s=new Set(), towns=new Set(); for(const f of grp){ for(const t of FIELD_TOWNS[f]) towns.add(t);} towns.forEach(t=>s.add(TOWN[t].color)); return {colors:s, towns}; }
 async function checkAchievements(st, pi){
   const pl=P(st,pi); const cubes=Object.values(pl.cubes);
-  const claim=(id,name)=>{ if(st.unique[id]===null){ st.unique[id]=pi; gainVP(st,pi,3); log(st, `🏅 ${pname(st,pi)} 达成独占成就「${name}」+3 分`, 't0'); } };
-  if (cubes.every(v=>v>=4)) claim('a1',UNIQUE_ACH[0].name);
-  if (pl.seals>=3) claim('a2',UNIQUE_ACH[1].name);
-  if (cubes.filter(v=>v>=10).length>=3) claim('a3',UNIQUE_ACH[2].name);
-  if (cubes.some(v=>v>=TOP)) claim('a5',UNIQUE_ACH[4].name);
+  const claim=(id)=>{ if(st.unique[id]===null){ st.unique[id]=pi; gainVP(st,pi,3); log(st, 'log.achUnique', {pn:pname(st,pi), id}, 't0'); } };
+  if (cubes.every(v=>v>=4)) claim('a1');
+  if (pl.seals>=3) claim('a2');
+  if (cubes.filter(v=>v>=10).length>=3) claim('a3');
+  if (cubes.some(v=>v>=TOP)) claim('a5');
   // 群相关
   const seen=new Set();
   for (const k of Object.keys(st.board)){
     if (st.board[k].p!==pi || seen.has(k)) continue;
     const g=groupOf(st,k); g.forEach(x=>seen.add(x)); if (g.size<2) continue;
     const {colors,towns}=groupTownColors(st,g);
-    if (colors.size>=5) claim('a4',UNIQUE_ACH[3].name);
+    if (colors.size>=5) claim('a4');
     const cnt={}; towns.forEach(t=>{ const c=TOWN[t].color; cnt[c]=(cnt[c]||0)+1; });
     for (const c of TRACK_COLORS){
-      if ((cnt[c]||0)>=3) claim('a6',UNIQUE_ACH[5].name);
-      if ((cnt[c]||0)>=2 && !pl.teal[c]){ pl.teal[c]=true; gainVP(st,pi,2); log(st, `🚩 ${pname(st,pi)} 一个群连接 2 座${CSHORT[c]}色城镇 +2 分`, 't0'); }
+      if ((cnt[c]||0)>=3) claim('a6');
+      if ((cnt[c]||0)>=2 && !pl.teal[c]){ pl.teal[c]=true; gainVP(st,pi,2); log(st, 'log.achPair', {pn:pname(st,pi), c}, 't0'); }
     }
   }
-  if (!pl.tealAll && TRACK_COLORS.every(c=>pl.teal[c])){ pl.tealAll=true; gainVP(st,pi,10); log(st, `🏆 ${pname(st,pi)} 五色连接成就全部达成 +10 分`, 't0'); }
+  if (!pl.tealAll && TRACK_COLORS.every(c=>pl.teal[c])){ pl.tealAll=true; gainVP(st,pi,10); log(st, 'log.achAll', {pn:pname(st,pi)}, 't0'); }
 }
 // 农夫板块动作（放置或移动使者到农夫格时立即执行）
 async function farmerAction(st, pi, key, ctx, decide){
   const t=st.farmerTiles[key]; if(!t) return; const pl=P(st,pi);
-  log(st, `　🌾 农夫板块 ${key}：${FT_NAME[t]}`);
+  log(st, 'log.farmer', {key, t});
   if (t==='vp2'||t==='vp3'){ const g=t==='vp2'?2:3; gainVP(st,pi,g); }
   else if (t==='envoy') ctx.extra++;
-  else if (t==='adv'){ const c2=await decide.chooseCube(st, pi, `农夫板块 ${key} 触发「推进任一方块 1 格」`); ensureBoard(st); if (c2){ await advanceCube(st, pi, c2, 1, ctx, decide, '农夫推进：'); ensureBoard(st); } else log(st,'　放弃推进'); }
+  else if (t==='adv'){ const c2=await decide.chooseCube(st, pi, {k:'why.farmerAdv', a:{key}}); ensureBoard(st); if (c2){ await advanceCube(st, pi, c2, 1, ctx, decide, 'farmer'); ensureBoard(st); } else log(st,'log.advSkip'); }
   else if (t==='herald'){
-    if (!st.heralds.length || !heraldTargets(st).length) { log(st,'　没有可移动的使者棋/目标'); }
-    else { const mv=await decide.chooseHerald(st, pi, `农夫板块 ${key}：可将任一使者棋移到没有使者棋且至少有 1 个空邻格的城镇`); ensureBoard(st);
-      if (mv){ st.heralds=st.heralds.filter(h=>h!==mv.from); st.heralds.push(mv.to); fxEmit(st,{t:'herald',from:mv.from,to:mv.to}); log(st, `　使者棋 ${mv.from} → ${mv.to}`); } else log(st,'　放弃移动使者棋'); }
+    if (!st.heralds.length || !heraldTargets(st).length) { log(st,'log.heraldNone'); }
+    else { const mv=await decide.chooseHerald(st, pi, {k:'why.farmerHerald', a:{key}}); ensureBoard(st);
+      if (mv){ st.heralds=st.heralds.filter(h=>h!==mv.from); st.heralds.push(mv.to); fxEmit(st,{t:'herald',from:mv.from,to:mv.to}); log(st, 'log.heraldMove', {from:mv.from, to:mv.to}); } else log(st,'log.heraldSkip'); }
   }
   await checkAchievements(st, pi);
 }
@@ -412,21 +693,21 @@ async function farmerAction(st, pi, key, ctx, decide){
 async function doPlacement(st, pi, key, useSeal, decide){
   const pl=P(st,pi); const ev=evalPlacement(st,key,pi,useSeal);
   pl.envoys--; st.board[key]={p:pi, seal:!!useSeal}; fxEmit(st,{t:'place',k:key,p:pi,seal:!!useSeal});
-  if (useSeal){ pl.seals--; log(st, `${pname(st,pi)} 在 ${key} 放置使者并压上印章 ◉`); }
-  else log(st, `${pname(st,pi)} 在 ${key} 放置使者${ev.single?'（单独）':'（成群 '+ev.group.size+'）'}`);
+  if (useSeal){ pl.seals--; log(st, 'log.placeSeal', {pn:pname(st,pi), key}); }
+  else log(st, 'log.place', {pn:pname(st,pi), key, single:!!ev.single, size:ev.group.size});
   const ctx={extra:0};
   await checkAchievements(st, pi);
   if (FARMER.has(key)){ await farmerAction(st, pi, key, ctx, decide); ensureBoard(st); }
   for (const sc of ev.scorings){
     fxEmit(st,{t:'town',k:sc.town,c:sc.color});
-    log(st, `　触发 ${CSHORT[sc.color]}色城镇 ${sc.town} 计分：${sc.anyBefore?'非首位到访 +2':'首位到访 +1'}${sc.herald?' +使者 1':''}`);
+    log(st, 'log.townScore', {c:sc.color, town:sc.town, anyBefore:!!sc.anyBefore, herald:!!sc.herald});
     await advanceCube(st, pi, sc.color, sc.steps, ctx, decide, ''); ensureBoard(st);
   }
   await checkAchievements(st, pi);
   return ctx;
 }
 function endCheck(st){
-  if (st.players.some(p=>p.vp>=50)) return '分数';
+  if (st.players.some(p=>p.vp>=50)) return 'vp';
   return null;
 }
 // 胜者判定（正式引擎与搜索/推演共用一份）：己色轨到顶者有资格，资格者中比分，平手首轮后行动者胜；无人达标按分
@@ -441,18 +722,18 @@ function finishGame(st, reason){
   st.ended=true;
   const {winner, minor, q} = decideWinner(st);
   st.result={reason, winner, minor, ranking:q.slice().sort((a,b)=>(b.qual-a.qual)||(b.vp-a.vp)||(b.order-a.order))};
-  log(st, `🎉 游戏结束（${reason}）。${st.result.minor?'无人达标，':''}胜者：${pname(st,winner)}`, 't0');
+  log(st, 'log.gameOver', {reason, minor:!!minor, pn:pname(st,winner)}, 't0');   // reason 是键：vp / envoys
 }
 // 一个完整回合：place → 结算 → 额外回合 → 终局检查 → 下一玩家
 async function runTurn(st, decide){
   const pi=st.turn.player; const pl=P(st,pi);
-  if (pl.envoys<=0){ log(st, `${pname(st,pi)} 没有使者可放置`); finishGame(st,'使者用尽'); return; }
+  if (pl.envoys<=0){ log(st, 'log.noEnvoys', {pn:pname(st,pi)}); finishGame(st,'envoys'); return; }
   const pick = await decide.choosePlacement(st, pi); ensureBoard(st);
   if (!pick) return;                           // 被撤销/中断
   const ctx = await doPlacement(st, pi, pick.key, pick.seal, decide); ensureBoard(st);
   st.turn.extra += ctx.extra;
-  const r=endCheck(st); if (r){ finishGame(st,'有玩家达到 50 分'); return; }
-  if (st.turn.extra>0){ st.turn.extra--; log(st, `⤴ ${pname(st,pi)} 获得额外回合（剩余 ${st.turn.extra}）`); }
+  const r=endCheck(st); if (r){ finishGame(st,r); return; }
+  if (st.turn.extra>0){ st.turn.extra--; log(st, 'log.extraTurn', {pn:pname(st,pi), n:st.turn.extra}); }
   else { st.turn.player=(pi+1)%st.players.length; st.turn.num++; }
 }
 
@@ -930,29 +1211,38 @@ let BOT_TUNE = {ownBase:1.78, ownProg:0.8, qualBonus:2.47, sealCost:0.57, blockW
                 stepW:1.19, extraW:2.16, sealGainW:4.28, heraldW:0, wasteP:0, chainSealW:5.46, chainExtraW:1.73, firstGiftP:0.73, farmerMoveW:1.65, achW:0, padW:0.25, burnP:0, openP:0, nearW:0, farmerNearW:0, advReply:0, endExact:0, exactNodes:20000, farmerDenyW:0, heraldTileW:0, sealUseCost:1.0, sealStepW:0, denyW:0, denySealW:0, denyAchW:0, explore:0, useNet:0, netRankW:0, netRankN:40, netFinalW:0, netSearchW:0, detCube:0, netSearchN:12, qualLeafW:0, stuckTakeW:0, stuckPlanW:0};
 
 /* =====================  人类决策（UI）  ===================== */
+/* —— 语言：?lang=en|zh > localStorage > 浏览器语言（zh* 之外一律英文）。页头按钮改 URL 参数后重载；引擎日志的 k/a 会按新语言重渲染 —— */
+const LANGS=['zh','en'];
+function detectLang(){ let q=null; try{ q=new URLSearchParams(location.search).get('lang'); }catch(e){} if (LANGS.includes(q)){ try{ localStorage.setItem('casc_lang',q); }catch(e){} return q; } try{ const s=localStorage.getItem('casc_lang'); if (LANGS.includes(s)) return s; }catch(e){} return /^zh/i.test(navigator.language||'')?'zh':'en'; }
+setLang(detectLang());
+const whyText=w=>!w?'':(typeof w==='string'?w:tr(w.k,w.a));   // 决策提示：引擎/服务器给的是 {k,a}
+(function applyStatic(){
+  document.documentElement.lang=LANG==='zh'?'zh-CN':'en'; document.title=tr('title'); document.getElementById('h1').innerHTML=tr('h1');
+  document.querySelectorAll('[data-t]').forEach(el=>{ el.innerHTML=tr(el.dataset.t); }); document.querySelectorAll('[data-tt]').forEach(el=>{ el.title=tr(el.dataset.tt); });
+  const bl=document.getElementById('btnLang'); bl.textContent=LANG==='zh'?'EN':'中文'; bl.onclick=()=>{ const u=new URL(location.href); u.searchParams.set('lang', LANG==='zh'?'en':'zh'); location.href=u.toString(); };
+})();
 const humanDecide = {
   choosePlacement(st, pi){
-    return new Promise(res=>{ UI.mode='place'; UI.resolve=res; setStatus(`轮到 ${pname(st,pi)}：请点击一个空格放置使者。${P(st,pi).seals>0?'（手中有印章，单独落在城镇旁时可选择使用）':''}`); render(); });
+    return new Promise(res=>{ UI.mode='place'; UI.resolve=res; setStatus(tr('status.place',{pn:pname(st,pi), seals:P(st,pi).seals>0})); render(); });
   },
   chooseCube(st, pi, why){
     return new Promise(res=>{
-      const pl=P(st,pi); const opts=TRACK_COLORS.map(c=>{ const pos=pl.cubes[c]; const def=trackDef(c); const blocked=pos>=TOP||(def[pos+1]&&def[pos+1].x);
-        return {label:`${CNAME[c]}：${pos} → ${blocked?(pos>=TOP?'已到顶':'被禁行格挡住'):pos+1}`, value:c, disabled:blocked, color:COL[c]}; });
-      render(); showModal(why, '选择要推进 1 格的方块', opts, res, '放弃推进');
+      const opts=cubeOptions(st,pi).map(o=>({label:tr('opt.cube',o), value:o.value, disabled:o.blocked, color:COL[o.value]}));
+      render(); showModal(whyText(why), tr('modal.cubeTitle'), opts, res, tr('modal.cubeCancel'));
     });
   },
   chooseMove(st, pi, why){
     return new Promise(res=>{
       const mine=Object.keys(st.board).filter(k=>st.board[k].p===pi && FIELD_FIELDS[k].some(n=>!st.board[n]));
       if (!mine.length){ res(null); return; }
-      UI.mode='move-from'; UI.resolve=res; UI.pick=null; setStatus(`${why}。先点击你的一枚使者，再点击相邻空格；或 <button onclick="UI.finish(null)">跳过</button>`); render();
+      UI.mode='move-from'; UI.resolve=res; UI.pick=null; setStatus(tr('status.move',{why:whyText(why)})); render();
     });
   },
   chooseHerald(st, pi, why){
     return new Promise(res=>{
       UI.mode='herald-from'; UI.resolve=res; UI.pick=null; UI.targets=new Set(heraldTargets(st));
       if (st.heralds.length===1){ UI.pick=st.heralds[0]; UI.mode='herald-to'; }
-      setStatus(`${why}。${UI.pick?'点击目标城镇（高亮）':'先点击要移动的使者棋，再点击目标城镇（高亮）'}；或 <button onclick="UI.finish(null)">跳过</button>`); render();
+      setStatus(tr('status.herald',{why:whyText(why), picked:!!UI.pick})); render();
     });
   },
 };
@@ -993,7 +1283,7 @@ async function gameLoop(){
     const st=S; const pl=P(st,st.turn.player);
     if (!pl.bot){ HISTORY.push(clone(st)); if (HISTORY.length>60) HISTORY.shift(); }
     const dec = pl.bot ? botDecide : humanDecide;
-    if (pl.bot){ setStatus(`${pname(st,st.turn.player)}（电脑）思考中…`); render(); await sleep(Math.max(900, fxRemaining())); if (g!==GEN) return; }
+    if (pl.bot){ setStatus(tr('status.bot',{pn:pname(st,st.turn.player)})); render(); await sleep(Math.max(900, fxRemaining())); if (g!==GEN) return; }
     await runTurn(st, recWrap(dec));
     if (g!==GEN || st!==S) return;     // 被撤销/新游戏替换
     save(); render();
@@ -1055,20 +1345,20 @@ function renderMap(){
     const k=c+','+r; const [x,y]=hexCenter(c,r); const t=TOWN[k];
     if (t){
       const isTarget = heraldMode && UI.targets && UI.targets.has(k); const isFrom = heraldMode && S.heralds.includes(k); const lit=litTowns.has(k);
-      h+=`<polygon class="hex town ${isTarget?'moveTarget':''}" data-t="${k}" points="${hexPts(x,y,R-1)}" fill="${COL[t.color]}" stroke="${isFrom?'#ffd400':lit?GOLD:'#6b3f14'}" stroke-width="${isFrom?3:lit?3.5:1.5}" ${heraldMode?'style="cursor:pointer"':''}><title>${CNAME[t.color]} 城镇 ${k}${lit?'（本回合触发计分）':''}</title></polygon>`;
+      h+=`<polygon class="hex town ${isTarget?'moveTarget':''}" data-t="${k}" points="${hexPts(x,y,R-1)}" fill="${COL[t.color]}" stroke="${isFrom?'#ffd400':lit?GOLD:'#6b3f14'}" stroke-width="${isFrom?3:lit?3.5:1.5}" ${heraldMode?'style="cursor:pointer"':''}><title>${tr('town.title',{c:t.color, k, lit:!!lit})}</title></polygon>`;
       if (t.icon) h+=`<text x="${x+9}" y="${y+12}" font-size="10" fill="#1d1208" text-anchor="middle" pointer-events="none">${ICON[t.icon]}</text>`;
       if (S && S.heralds.includes(k)){
         const hm=heraldTo[k]; let cls='', sty='';
         if (hm){ const a=fxA(hm); if (a){ const [x1,y1]=hexK(hm.from); cls='fx-slide'; sty=`--dx:${(x1-x).toFixed(1)}px;--dy:${(y1-y).toFixed(1)}px;animation-delay:${a.delay}ms`; } overlay+=markRing(x,y-2,13); }
-        h+=`<g pointer-events="none" class="${cls}" style="${sty}"><circle cx="${x}" cy="${y-2}" r="9" fill="#fff" stroke="${UI.pick===k?'#ffd400':'#3b2a1a'}" stroke-width="${UI.pick===k?3:1.5}"/><text x="${x}" y="${y+2}" font-size="10" text-anchor="middle" fill="#3b2a1a" font-weight="700">使</text></g>`;
+        h+=`<g pointer-events="none" class="${cls}" style="${sty}"><circle cx="${x}" cy="${y-2}" r="9" fill="#fff" stroke="${UI.pick===k?'#ffd400':'#3b2a1a'}" stroke-width="${UI.pick===k?3:1.5}"/><text x="${x}" y="${y+2}" font-size="10" text-anchor="middle" fill="#3b2a1a" font-weight="700">${tr('glyph.herald')}</text></g>`;
       }
-      else h+=`<text x="${x}" y="${y+4}" font-size="9" text-anchor="middle" fill="rgba(40,20,0,.55)" pointer-events="none">${CSHORT[t.color]}</text>`;
+      else h+=`<text x="${x}" y="${y+4}" font-size="9" text-anchor="middle" fill="rgba(40,20,0,.55)" pointer-events="none">${tr('ci.'+t.color)}</text>`;
     } else if (FARMER.has(k)) {
       const tile=S?S.farmerTiles[k]:null; const unlocked = S && me>=0 && farmerUnlocked(S,k,me); const occupied = S && S.board[k];
       let cls='hex field farmer'; if (legal.has(k)) cls+=' legal'; if (UI.targets && UI.targets.has(k)) cls+=' moveTarget';
-      h+=`<polygon class="${cls}" data-k="${k}" points="${hexPts(x,y,R-1)}" fill="#b7c47a" stroke="${unlocked?'#3f7a2a':'#8a6a3a'}" stroke-width="1.6" ${unlocked||occupied?'':'stroke-dasharray="3,2"'}><title>农夫格 ${k}：${tile?FT_NAME[tile]:''}${unlocked?'（已为你解锁）':'（对你上锁：需先在相邻格放置使者）'}</title></polygon>`;
-      if (tile && !occupied) h+=`<text x="${x}" y="${y+4}" font-size="${tile==='herald'?8:11}" text-anchor="middle" fill="#2f4a1a" font-weight="700" pointer-events="none">${FT_GLYPH[tile]}</text>`;
-      if (tile && occupied) h+=`<text x="${x+11}" y="${y+13}" font-size="7" text-anchor="middle" fill="#2f4a1a" font-weight="700" pointer-events="none">${FT_GLYPH[tile]}</text>`;
+      h+=`<polygon class="${cls}" data-k="${k}" points="${hexPts(x,y,R-1)}" fill="#b7c47a" stroke="${unlocked?'#3f7a2a':'#8a6a3a'}" stroke-width="1.6" ${unlocked||occupied?'':'stroke-dasharray="3,2"'}><title>${tr('farmer.title',{k, t:tile, unlocked:!!unlocked})}</title></polygon>`;
+      if (tile && !occupied) h+=`<text x="${x}" y="${y+4}" font-size="${tile==='herald'?8:11}" text-anchor="middle" fill="#2f4a1a" font-weight="700" pointer-events="none">${FT_GLYPH[tile]||tr('glyph.ftHerald')}</text>`;
+      if (tile && occupied) h+=`<text x="${x+11}" y="${y+13}" font-size="7" text-anchor="middle" fill="#2f4a1a" font-weight="700" pointer-events="none">${FT_GLYPH[tile]||tr('glyph.ftHerald')}</text>`;
       if (!unlocked && !occupied && S) h+=`<text x="${x-10}" y="${y-8}" font-size="8" pointer-events="none">🔒</text>`;
     } else {
       let cls='hex field'; if (legal.has(k)) cls+=' legal'; if (UI.targets && UI.targets.has(k)) cls+=' moveTarget'; if (k===fx.placed || movedTo[k]) cls+=' moved';
@@ -1085,13 +1375,13 @@ function renderMap(){
       if (isNew){ const a=fxA(fx.place); if (a){ gcls='fx-pop'; sty=`animation-delay:${a.delay}ms`; ring=`<circle class="fx-ring" style="${sty}" cx="${x}" cy="${y}" r="12" fill="none" stroke="${GOLD}" stroke-width="3"/>`; } }
       else if (mv){ const a=fxA(mv); if (a){ const [x1,y1]=hexK(mv.from); gcls='fx-slide'; sty=`--dx:${(x1-x).toFixed(1)}px;--dy:${(y1-y).toFixed(1)}px;animation-delay:${a.delay}ms`; } }
       if (isNew||mv) overlay+=markRing(x,y,15.5);
-      h+=`<g class="${gcls}" style="${sty}"><circle class="${cls}" data-e="${k}" cx="${x}" cy="${y}" r="11" fill="${COL[P(S,e.p).color]}"><title>${P(S,e.p).name}${e.seal?'（压印章）':''}${isNew?' · 本回合放下':mv?' · 本回合移入':''}</title></circle>`;
+      h+=`<g class="${gcls}" style="${sty}"><circle class="${cls}" data-e="${k}" cx="${x}" cy="${y}" r="11" fill="${COL[P(S,e.p).color]}"><title>${tr('envoy.title',{name:P(S,e.p).name, seal:!!e.seal, isNew:!!isNew, moved:!!mv})}</title></circle>`;
       if (e.seal) h+=`<circle cx="${x}" cy="${y}" r="5" fill="#c8102e" stroke="#ffd98a" stroke-width="1.5" pointer-events="none"/>`;
       h+=`</g>`+ring;
     }
   }
   svg.innerHTML=h+overlay;
-  document.getElementById('mapInfo').textContent = S ? `${BOARDS[S.boardId||'front'].name} · 使者棋在 ${S.heraldIcon==='star'?'★':S.heraldIcon==='o'?'●':'✖'} 城镇 · 第 ${S.turn.num} 回合${REC?' · 📼 记录中':''}${NET.on&&NET.room?' · 🌐 房间 '+NET.room:''}` : '';
+  document.getElementById('mapInfo').textContent = S ? tr('mapInfo',{board:S.boardId||'front', icon:S.heraldIcon==='star'?'★':S.heraldIcon==='o'?'●':'✖', turn:S.turn.num, rec:!!REC, room:(NET.on&&NET.room)?NET.room:''}) : '';
 }
 
 /* —— 成功轨 —— */
@@ -1117,7 +1407,7 @@ function badge(bx,by,sp,dark,state){
     } else s+=coin(bx,by,11,sp.vp[0],'gold');
   }
   if (sp.seal){
-    if (!state.sealTaken) s+=`<circle cx="${bx}" cy="${by}" r="10.5" fill="#c8102e" stroke="#ffd98a" stroke-width="1.8"/><text x="${bx}" y="${by+4}" font-size="10.5" text-anchor="middle" fill="#ffe9a8" font-weight="700">印</text>`;
+    if (!state.sealTaken) s+=`<circle cx="${bx}" cy="${by}" r="10.5" fill="#c8102e" stroke="#ffd98a" stroke-width="1.8"/><text x="${bx}" y="${by+4}" font-size="10.5" text-anchor="middle" fill="#ffe9a8" font-weight="700">${tr('glyph.seal')}</text>`;
     else s+=`<circle cx="${bx}" cy="${by}" r="10.5" fill="none" stroke="${dark?'rgba(30,20,10,.5)':'rgba(255,255,255,.6)'}" stroke-width="1.4" stroke-dasharray="2.5 2"/><text x="${bx}" y="${by+4.5}" font-size="13" text-anchor="middle" fill="${dark?'rgba(30,20,10,.6)':'rgba(255,255,255,.75)'}">◉</text>`;
   }
   if (sp.adv) s+=`<text x="${bx}" y="${by+6.5}" font-size="19" text-anchor="middle" fill="${tc}" font-weight="700">▲</text>`;
@@ -1139,12 +1429,13 @@ function renderTracks(){
     for (let q=a.from+1;q<=a.to;q++) h+=`<rect x="${x-3}" y="${cellTop(q)-3}" width="${TK.cw+6}" height="${TK.cellH+2}" rx="6" fill="${GOLD}" opacity=".28" stroke="${GOLD}" stroke-width="1.5"/>`; }
   TRACK_COLORS.forEach((c,ci)=>{
     const def=trackDef(c); const x=TK.x0+ci*TK.colW; const dark = c==='white'||c==='yellow';
-    h+=`<text x="${x+TK.cw/2}" y="28" font-size="14" text-anchor="middle" fill="#f3e7c9" font-weight="700">${CNAME[c]}</text>`;
+    const sub=tr('tracksub.'+c);   // 英文表头分两行：颜色 + 小字主题（列宽 86px 放不下 "Yellow · Farming"）
+    h+=`<text x="${x+TK.cw/2}" y="${sub?23:28}" font-size="14" text-anchor="middle" fill="#f3e7c9" font-weight="700">${tr('track.'+c)}</text>${sub?`<text x="${x+TK.cw/2}" y="37" font-size="8.5" text-anchor="middle" fill="#b9a27a" letter-spacing=".8">${sub}</text>`:''}`;
     for (let p=0;p<=TOP;p++){
       const t=cellTop(p); const sp=def[p]||{}; const bx=x+64, by=t+17;
       h+=`<rect x="${x}" y="${t}" width="${TK.cw}" height="${TK.cellH-4}" rx="5" fill="${sp.x?'#143c3a':COL[c]}" opacity="${sp.x?1:.88}" stroke="#0e2f2d"/>`;
       if (sp.x){ h+=`<text x="${x+TK.cw/2}" y="${t+23}" font-size="17" text-anchor="middle" fill="#8fb3b0" font-weight="700">✕</text>`; continue; }
-      if (p===0) h+=`<text x="${bx}" y="${by+5.5}" font-size="14" text-anchor="middle" fill="${dark?'#2f2113':'#fff'}" font-weight="700">起</text>`;
+      if (p===0) h+=`<text x="${bx}" y="${by+5.5}" font-size="14" text-anchor="middle" fill="${dark?'#2f2113':'#fff'}" font-weight="700">${tr('glyph.start')}</text>`;
       h+=badge(bx,by,sp,dark,{firstTaken: sp.vp&&sp.vp.length>1 && S.tracks[c].firstVP[p], sealTaken: sp.seal && S.tracks[c].sealTaken[p]});
     }
     // 方块（含本回合爬轨的虚影/光环/滑动动画）
@@ -1156,12 +1447,12 @@ function renderTracks(){
         h+=`<rect x="${cx-3}" y="${cy-3}" width="${CUBE+6}" height="${CUBE+6}" rx="4" fill="${GOLD}" class="fx-mark"/>`;
         const an=fxA(a.e); if (an){ cls='fx-slide'; sty=`--dy:${(gy-cy).toFixed(1)}px;animation-delay:${an.delay}ms`; }
       }
-      h+=`<rect class="${cls}" style="${sty}" x="${cx}" y="${cy}" width="${CUBE}" height="${CUBE}" rx="2" fill="${COL[pl.color]}" stroke="#1d1208" stroke-width="1.3"><title>${pl.name}：${CSHORT[c]}轨 ${p}${a&&a.to===p?'（本回合 '+a.from+'→'+a.to+'）':''}</title></rect>`;
+      h+=`<rect class="${cls}" style="${sty}" x="${cx}" y="${cy}" width="${CUBE}" height="${CUBE}" rx="2" fill="${COL[pl.color]}" stroke="#1d1208" stroke-width="1.3"><title>${tr('cube.title',{name:pl.name, c, p, from:(a&&a.to===p)?a.from:undefined, to:(a&&a.to===p)?a.to:undefined})}</title></rect>`;
     });
   });
   // 取走印章的浮字
   for (const e of fx.seals){ const an=fxA(e); if (!an) continue; const ci=TRACK_COLORS.indexOf(e.c); const x=TK.x0+ci*TK.colW;
-    h+=`<text class="fx-rise" style="animation-delay:${an.delay}ms" x="${x+64}" y="${cellTop(e.pos)+12}" font-size="12" text-anchor="middle" fill="#ffe9a8" stroke="${GOLD_D}" stroke-width=".6" font-weight="700">印章 +1</text>`; }
+    h+=`<text class="fx-rise" style="animation-delay:${an.delay}ms" x="${x+64}" y="${cellTop(e.pos)+12}" font-size="12" text-anchor="middle" fill="#ffe9a8" stroke="${GOLD_D}" stroke-width=".6" font-weight="700">${tr('glyph.sealUp')}</text>`; }
   svg.innerHTML=h;
 }
 
@@ -1176,8 +1467,8 @@ function renderScore(){
   const fx=FXS||fxSummary(); let h='';
   for (let v=0; v<=50; v++){ const [x,y]=scoreCell(v); const goal=v===50, five=v%5===0&&v>0;
     h+=`<rect x="${x+1.5}" y="${y}" width="${SC.cw-3}" height="${SC.ch}" rx="5" fill="${goal?GOLD:five?'#eddcb0':'#f7eed9'}" stroke="${goal?'#a67a1f':'#8c6a44'}" stroke-width="${goal?1.5:1}"/>`;
-    h+=`<text x="${x+SC.cw/2}" y="${y+13}" font-size="${five||v===0?12:10}" text-anchor="middle" fill="${goal?'#2f2113':five?'#3f2d1c':'#7a5a3a'}" font-weight="${five||v===0?700:400}">${v===0?'起':v}</text>`;
-    if (goal) h+=`<text x="${x+SC.cw/2}" y="${y+44}" font-size="8" text-anchor="middle" fill="#5a3a00">终局</text>`;
+    h+=`<text x="${x+SC.cw/2}" y="${y+13}" font-size="${five||v===0?12:10}" text-anchor="middle" fill="${goal?'#2f2113':five?'#3f2d1c':'#7a5a3a'}" font-weight="${five||v===0?700:400}">${v===0?tr('glyph.start'):v}</text>`;
+    if (goal) h+=`<text x="${x+SC.cw/2}" y="${y+44}" font-size="8" text-anchor="middle" fill="#5a3a00">${tr('glyph.end')}</text>`;
   }
   if (SC.rows===2) h+=`<text x="${SC.cw/2}" y="${SC.pad+SC.ch+SC.gap+32}" font-size="20" text-anchor="middle" fill="${GOLD}" opacity=".7">↳</text>`;
   const byCell={}; S.players.forEach((p,i)=>{ const v=Math.min(50,p.vp); (byCell[v]=byCell[v]||[]).push(i); });
@@ -1188,7 +1479,7 @@ function renderScore(){
         h+=ghostDot(gx,gy,8.5);
         if (an){ cls='fx-slide'; sty=`--dx:${(gx-cx).toFixed(1)}px;--dy:${(gy-cy).toFixed(1)}px;animation-delay:${an.delay}ms`; }
         top+=markRing(cx,cy,11.5); }
-      h+=`<circle class="${cls}" style="${sty}" cx="${cx}" cy="${cy}" r="8.5" fill="${COL[pl.color]}" stroke="#2b1a0c" stroke-width="1.5"><title>${pl.name}：${pl.vp} 分${agg?'（本回合 +'+(agg.to-agg.from)+'）':''}</title></circle>`;
+      h+=`<circle class="${cls}" style="${sty}" cx="${cx}" cy="${cy}" r="8.5" fill="${COL[pl.color]}" stroke="#2b1a0c" stroke-width="1.5"><title>${tr('score.title',{name:pl.name, vp:pl.vp, d:agg?(agg.to-agg.from):0})}</title></circle>`;
       if (an) top+=`<text class="fx-rise" style="animation-delay:${an.delay+250}ms" x="${cx}" y="${cy-11}" font-size="13" text-anchor="middle" fill="${COL[pl.color]}" stroke="#2b1a0c" stroke-width=".7" font-weight="700">+${agg.to-agg.from}</text>`;
     });
   }
@@ -1200,29 +1491,29 @@ function renderPlayers(){
   const fx=FXS||fxSummary();
   el.innerHTML=S.players.map((p,i)=>{ const agg=fx.vp[i]; const an=agg?fxA(agg.e):null;
     return `<div class="pl ${!S.ended&&i===S.turn.player?'active':''}">
-    <span class="dot" style="background:${COL[p.color]}"></span><span class="nm">${p.name}${p.bot?' 🤖'+({1:'简',2:'普',3:'难'}[p.level]||''):''}</span>
-    <span class="st"><span>使者 ${p.envoys}</span><span>印章 ${p.seals}</span><span>${CSHORT[p.color]}轨 ${p.cubes[p.color]}/15 ${p.cubes[p.color]>=TOP?'✅':''}</span>
+    <span class="dot" style="background:${COL[p.color]}"></span><span class="nm">${p.name}${p.bot?' 🤖'+({1:tr('lv.short.1'),2:tr('lv.short.2'),3:tr('lv.short.3')}[p.level]||''):''}</span>
+    <span class="st"><span>${tr('pl.envoys',{n:p.envoys})}</span><span>${tr('pl.seals',{n:p.seals})}</span><span>${tr('pl.own',{c:p.color, p:p.cubes[p.color]})} ${p.cubes[p.color]>=TOP?'✅':''}</span>
     <span>${TRACK_COLORS.map(c=>`<span class="tag" style="background:${COL[c]}"></span><span class="${fx.cubes[i+':'+c]?'up':''}">${p.cubes[c]}</span>`).join(' ')}</span></span>
     <span class="vp ${an?'bump':''}" style="${an?`animation-delay:${an.delay}ms`:''}">${p.vp}</span>${agg?`<span class="delta">+${agg.to-agg.from}</span>`:''}</div>`; }).join('');
   document.getElementById('mini').innerHTML=S.players.map((p,i)=>{ const agg=fx.vp[i]; const an=agg?fxA(agg.e):null;
-    return `<span class="chip ${!S.ended&&i===S.turn.player?'active':''}" title="${p.name}：${p.vp} 分"><span class="dot" style="background:${COL[p.color]}"></span>${p.name}<b class="${an?'bump':''}" style="${an?`animation-delay:${an.delay}ms`:''}">${p.vp}</b></span>`; }).join('');
+    return `<span class="chip ${!S.ended&&i===S.turn.player?'active':''}" title="${tr('score.title',{name:p.name, vp:p.vp, d:0})}"><span class="dot" style="background:${COL[p.color]}"></span>${p.name}<b class="${an?'bump':''}" style="${an?`animation-delay:${an.delay}ms`:''}">${p.vp}</b></span>`; }).join('');
 }
 function renderAch(){
   const el=document.getElementById('ach'); if(!S){el.innerHTML='';return;} let h='';
-  UNIQUE_ACH.forEach(a=>{ const w=S.unique[a.id]; h+=`<div class="a ${w!==null?'done':''}"><span>${a.name}</span><span>${w!==null?`<span class="tag" style="background:${COL[P(S,w).color]}"></span>+3`:'+3'}</span></div>`; });
-  TRACK_COLORS.forEach(c=>{ h+=`<div class="a teal"><span class="cl" style="color:${COL[c]}">一个群连接 2 座${CSHORT[c]}色城镇</span><span>${S.players.map(p=>p.teal[c]?`<span class="tag" style="background:${COL[p.color]}"></span>`:'').join('')}+2</span></div>`; });
-  h+=`<div class="a teal"><span class="five">${TRACK_COLORS.map(c=>`<i style="color:${COL[c]}">${CSHORT[c]}</i>`).join('')}<span style="margin-left:7px">五色连接全部达成</span></span><span>${S.players.map(p=>p.tealAll?`<span class="tag" style="background:${COL[p.color]}"></span>`:'').join('')}+10</span></div>`;
+  UNIQUE_ACH.forEach(a=>{ const w=S.unique[a.id]; h+=`<div class="a ${w!==null?'done':''}"><span>${tr('ach.'+a.id)}</span><span>${w!==null?`<span class="tag" style="background:${COL[P(S,w).color]}"></span>+3`:'+3'}</span></div>`; });
+  TRACK_COLORS.forEach(c=>{ h+=`<div class="a teal"><span class="cl" style="color:${COL[c]}">${tr('ach.pair',{c})}</span><span>${S.players.map(p=>p.teal[c]?`<span class="tag" style="background:${COL[p.color]}"></span>`:'').join('')}+2</span></div>`; });
+  h+=`<div class="a teal"><span class="five">${TRACK_COLORS.map(c=>`<i style="color:${COL[c]}">${tr('ci.'+c)}</i>`).join('')}<span style="margin-left:7px">${tr('ach.all')}</span></span><span>${S.players.map(p=>p.tealAll?`<span class="tag" style="background:${COL[p.color]}"></span>`:'').join('')}+10</span></div>`;
   el.innerHTML=h;
 }
 let LOG_MORE=0, LOG_GAME=null;                    // 记录面板分段折叠：默认只显示最近几手，更早的按段展开；换局归零
 const LOG_TAIL=14, LOG_STEP=20;
-function logWindowStart(L, n){ let i=Math.max(0, L.length-n); while (i>0 && i<L.length && (L[i].m||'').startsWith('　')) i--; return i; }   // 起点对齐到某一手的首行（子行以全角空格开头）
+function logWindowStart(L, n){ let i=Math.max(0, L.length-n); while (i>0 && i<L.length && logText(L[i]).startsWith('　')) i--; return i; }   // 起点对齐到某一手的首行（子行以全角空格开头）
 function renderLog(keepTop){
   const el=document.getElementById('log'); if(!S){ el.innerHTML=''; return; }
   if (LOG_GAME!==S.seed){ LOG_GAME=S.seed; LOG_MORE=0; }
   const L=S.log, start=logWindowStart(L, LOG_TAIL+LOG_MORE), hidden=start;
-  const bar=(hidden>0||LOG_MORE>0) ? `<div class="fold-bar">${hidden>0?`前面还有 ${hidden} 条记录 <b data-act="more">展开 ${Math.min(LOG_STEP,hidden)} 条</b>`:'更早的记录已全部展开'}${LOG_MORE>0?`<b data-act="less">收起</b>`:''}</div>` : '';
-  el.innerHTML=bar+L.slice(start).map(l=>`<div class="${l.c}">${l.m}</div>`).join('');
+  const bar=(hidden>0||LOG_MORE>0) ? `<div class="fold-bar">${hidden>0?tr('log.more',{n:hidden, m:Math.min(LOG_STEP,hidden)}):tr('log.allShown')}${LOG_MORE>0?`<b data-act="less">${tr('log.less')}</b>`:''}</div>` : '';
+  el.innerHTML=bar+L.slice(start).map(l=>`<div class="${l.c}">${logText(l)}</div>`).join('');
   el.scrollTop=keepTop?0:el.scrollHeight;
 }
 document.getElementById('log').addEventListener('click', e=>{ const b=e.target.closest('b[data-act]'); if (!b||!S) return; if (b.dataset.act==='more') LOG_MORE+=LOG_STEP; else LOG_MORE=0; renderLog(b.dataset.act==='more'); });
@@ -1231,16 +1522,16 @@ function setStatus(html){ document.getElementById('status').innerHTML=html; }
 function renderLegend(){
   const cell=(inner,fill)=>`<svg viewBox="0 0 40 40"><rect x="1" y="1" width="38" height="38" rx="6" fill="${fill||'#2a9bc4'}" stroke="#0e2f2d"/>${inner}</svg>`;
   const items=[
-    [cell(badge(18,18,{vp:[2,1]},false,{})), '<b>分数横幅 2｜1</b>：先到的方块得 2 分，之后到的得 1 分'],
-    [cell(badge(18,18,{vp:[2,1]},false,{firstTaken:true})), '<b>大数已被取走</b>：高亮切到小数，后来者只得 1 分'],
-    [cell(badge(18,18,{vp:[3]},false,{})), '<b>分数横幅 3</b>：每个到达的方块各得 3 分'],
-    [cell(badge(18,18,{adv:1},false,{})), '<b>▲ 推进</b>：任一颜色方块再进 1 格，可连锁'],
-    [cell(badge(18,18,{envoy:1},false,{})), '<b>⤴ 额外回合</b>：本回合结束后再来一回合'],
-    [cell(badge(18,18,{seal:1},false,{})), '<b>印 折叠格</b>：方块正好停住才生效，取走印章'],
-    [cell(badge(18,18,{seal:1},false,{sealTaken:true})), '<b>◉ 印章已取</b>：停住可把你的一枚使者移到相邻空格'],
-    [cell(`<text x="20" y="26" font-size="17" text-anchor="middle" fill="#8fb3b0" font-weight="700">✕</text>`,'#143c3a'), '<b>✕ 禁行格</b>：不能停留，只能被 2/3 格推进跃过'],
-    [cell(`<text x="20" y="26" font-size="17" text-anchor="middle" fill="${GOLD}">⚜</text>`,'#1b4d4a'), '<b>⚜ 成就横幅</b>：第 4/10/15 格，三项独占成就各 +3'],
-    [`<svg viewBox="0 0 40 40"><rect x="1" y="1" width="38" height="38" rx="6" fill="#ecdcb7" stroke="#b3742f"/>${markRing(20,20,14)}<circle cx="20" cy="20" r="10" fill="#d5407a" stroke="#2b1a0c" stroke-width="1.5"/></svg>`, '<b>金色光环</b>：本回合刚动过的棋子；虚影 = 移动前位置'],
+    [cell(badge(18,18,{vp:[2,1]},false,{})), tr('legend.1')],
+    [cell(badge(18,18,{vp:[2,1]},false,{firstTaken:true})), tr('legend.2')],
+    [cell(badge(18,18,{vp:[3]},false,{})), tr('legend.3')],
+    [cell(badge(18,18,{adv:1},false,{})), tr('legend.4')],
+    [cell(badge(18,18,{envoy:1},false,{})), tr('legend.5')],
+    [cell(badge(18,18,{seal:1},false,{})), tr('legend.6')],
+    [cell(badge(18,18,{seal:1},false,{sealTaken:true})), tr('legend.7')],
+    [cell(`<text x="20" y="26" font-size="17" text-anchor="middle" fill="#8fb3b0" font-weight="700">✕</text>`,'#143c3a'), tr('legend.8')],
+    [cell(`<text x="20" y="26" font-size="17" text-anchor="middle" fill="${GOLD}">⚜</text>`,'#1b4d4a'), tr('legend.9')],
+    [`<svg viewBox="0 0 40 40"><rect x="1" y="1" width="38" height="38" rx="6" fill="#ecdcb7" stroke="#b3742f"/>${markRing(20,20,14)}<circle cx="20" cy="20" r="10" fill="#d5407a" stroke="#2b1a0c" stroke-width="1.5"/></svg>`, tr('legend.10')],
   ];
   document.getElementById('legend').innerHTML=items.map(([g,t])=>`<li>${g}<span>${t}</span></li>`).join('');
 }
@@ -1280,10 +1571,12 @@ document.getElementById('map').addEventListener('click', async e=>{
   }
   if (UI.mode==='place' && hexEl){
     const k=hexEl.dataset.k; if (S.board[k]) return;
-    if (FARMER.has(k) && !farmerUnlocked(S,k,pi)){ setStatus(`农夫格 ${k} 对你仍是上锁的：先在它旁边放一枚你的使者。`); return; }
+    if (FARMER.has(k) && !farmerUnlocked(S,k,pi)){ setStatus(tr('status.farmerLocked',{k})); return; }
     let seal=false;
     if (canUseSealHere(S,k,pi)){
-      const ans = await askModal('使用印章？', `你放在 ${k} 的是一枚单独使者，旁边有城镇。压上一枚印章（手中 ${P(S,pi).seals} 枚）即可触发计分。`, [{label:'使用印章 ◉ 并计分',value:true},{label:'不用印章（不触发计分）',value:false}]);
+      document.getElementById('modal').dataset.kind='seal';
+      const ans = await askModal(tr('seal.title'), tr('seal.sub',{k, n:P(S,pi).seals}), [{label:tr('seal.yes'),value:true},{label:tr('seal.no'),value:false}]);
+      document.getElementById('modal').dataset.kind='';
       if (ans===undefined) return; seal=ans;
     } else {
       const ev=evalPlacement(S,k,pi,false);
@@ -1305,35 +1598,35 @@ function showModal(title, sub, opts, res, cancelLabel){
   bg.classList.add('show');
   m.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; const i=+b.dataset.i; bg.classList.remove('show'); m.onclick=null; res(i>=0?opts[i].value:null); };
 }
-function askModal(title, sub, opts){ return new Promise(res=>showModal(title, sub, opts, v=>res(v===null?undefined:v), '取消')); }
+function askModal(title, sub, opts){ return new Promise(res=>showModal(title, sub, opts, v=>res(v===null?undefined:v), tr('btn.cancel'))); }
 function showResult(){
-  const r=S.result; const rows=r.ranking.map((x,n)=>{ const p=P(S,x.i); return `<div class="row"><b>${n+1}.</b> <span class="tag" style="background:${COL[p.color]};width:16px;height:16px"></span> ${p.name} — ${p.vp} 分 ${x.qual?'（己色轨已到顶 ✅）':'（己色轨未到顶，无资格）'}</div>`; }).join('');
+  const r=S.result; const rows=r.ranking.map((x,n)=>{ const p=P(S,x.i); return `<div class="row"><b>${n+1}.</b> <span class="tag" style="background:${COL[p.color]};width:16px;height:16px"></span> ${tr('result.row',{name:p.name, vp:p.vp, qual:!!x.qual})}</div>`; }).join('');
   const bg=document.getElementById('modalBg'), m=document.getElementById('modal');
-  m.innerHTML=`<h3>游戏结束 · ${r.reason}</h3><div>${r.minor?'<b>无人达到己色轨顶端，按小胜规则由最高分获胜。</b>':''}</div><div style="margin:8px 0">${rows}</div><div class="row"><button class="primary" id="mClose">关闭</button>${(!NET.on||(NET.view&&NET.view.isOwner))?`<button id="mNew">${NET.on?'再来一局（回到房间）':'再来一局'}</button>`:''}</div>`;
+  m.innerHTML=`<h3>${tr('result.title',{reason:r.reason})}</h3><div>${r.minor?'<b>'+tr('result.minor')+'</b>':''}</div><div style="margin:8px 0">${rows}</div><div class="row"><button class="primary" id="mClose">${tr('btn.close')}</button>${(!NET.on||(NET.view&&NET.view.isOwner))?`<button id="mNew">${NET.on?tr('btn.againRoom'):tr('btn.again')}</button>`:''}</div>`;
   bg.classList.add('show');
   document.getElementById('mClose').onclick=()=>bg.classList.remove('show');
   const mn=document.getElementById('mNew'); if (mn) mn.onclick=()=>{ bg.classList.remove('show'); if (NET.on) netSend({t:'restart'}); else openNewGame(); };
 }
 function openNewGame(){
   const bg=document.getElementById('modalBg'), m=document.getElementById('modal');
-  const saved = Object.assign({n:2, herald:'star', board:'front', players:[{name:'玩家1',color:'blue',bot:false},{name:'电脑',color:'pink',bot:true},{name:'玩家3',color:'yellow',bot:true},{name:'玩家4',color:'orange',bot:true}]}, JSON.parse(localStorage.getItem('casc_cfg')||'null')||{});
-  if (Array.isArray(saved.players)) saved.players.forEach((p,i)=>{ if (p) p.name=cleanNick(p.name,'玩家'+(i+1)); });
-  const pRow=i=>`<div class="row" data-p="${i}"><span style="width:22px">${i+1}.</span><input type="text" value="${saved.players[i].name}" style="width:110px"><select class="col">${PLAYER_COLORS.map(c=>`<option value="${c}" ${saved.players[i].color===c?'selected':''}>${CNAME[c]}</option>`).join('')}</select><select class="bot">${[['0','真人'],['1','电脑·简单'],['2','电脑·普通'],['3','电脑·困难']].map(([v,l])=>{const lv=saved.players[i].level!==undefined?saved.players[i].level:(saved.players[i].bot?2:0);return `<option value="${v}" ${String(lv)===v?'selected':''}>${l}</option>`;}).join('')}</select></div>`;
-  m.innerHTML=`<h3>新游戏</h3>
-   <div class="row"><label>人数 <select id="ngN">${[2,3,4].map(n=>`<option ${saved.n===n?'selected':''}>${n}</option>`).join('')}</select></label>
-   <label>使者棋放在 <select id="ngH"><option value="star" ${saved.herald==='star'?'selected':''}>★ 城镇（标准）</option><option value="o" ${saved.herald==='o'?'selected':''}>● 城镇（变体）</option><option value="x" ${saved.herald==='x'?'selected':''}>✖ 城镇（变体）</option></select></label></div>
-   <div class="row"><label>版图 <select id="ngB"><option value="front" ${saved.board!=='back'?'selected':''}>正面（36 城，标准）</option><option value="back" ${saved.board==='back'?'selected':''}>背面（26 城 + 24 农夫板块）</option></select></label></div>
+  const saved = Object.assign({n:2, herald:'star', board:'front', players:[{name:tr('player_n',{n:1}),color:'blue',bot:false},{name:tr('defaultBot'),color:'pink',bot:true},{name:tr('player_n',{n:3}),color:'yellow',bot:true},{name:tr('player_n',{n:4}),color:'orange',bot:true}]}, JSON.parse(localStorage.getItem('casc_cfg')||'null')||{});
+  if (Array.isArray(saved.players)) saved.players.forEach((p,i)=>{ if (p) p.name=cleanNick(p.name,tr('player_n',{n:i+1})); });
+  const pRow=i=>`<div class="row" data-p="${i}"><span style="width:22px">${i+1}.</span><input type="text" value="${saved.players[i].name}" style="width:110px"><select class="col">${PLAYER_COLORS.map(c=>`<option value="${c}" ${saved.players[i].color===c?'selected':''}>${tr('color.'+c)}</option>`).join('')}</select><select class="bot">${[0,1,2,3].map(v=>[String(v),tr('lv.'+v)]).map(([v,l])=>{const lv=saved.players[i].level!==undefined?saved.players[i].level:(saved.players[i].bot?2:0);return `<option value="${v}" ${String(lv)===v?'selected':''}>${l}</option>`;}).join('')}</select></div>`;
+  m.innerHTML=`<h3>${tr('ng.title')}</h3>
+   <div class="row"><label>${tr('ng.n')} <select id="ngN">${[2,3,4].map(n=>`<option ${saved.n===n?'selected':''}>${n}</option>`).join('')}</select></label>
+   <label>${tr('ng.herald')} <select id="ngH"><option value="star" ${saved.herald==='star'?'selected':''}>${tr('ng.heraldStar')}</option><option value="o" ${saved.herald==='o'?'selected':''}>${tr('ng.heraldO')}</option><option value="x" ${saved.herald==='x'?'selected':''}>${tr('ng.heraldX')}</option></select></label></div>
+   <div class="row"><label>${tr('ng.board')} <select id="ngB"><option value="front" ${saved.board!=='back'?'selected':''}>${tr('ng.front')}</option><option value="back" ${saved.board==='back'?'selected':''}>${tr('ng.back')}</option></select></label></div>
    <div id="ngP">${[0,1,2,3].map(pRow).join('')}</div>
-   <div style="font-size:12px;color:#5a4634">提示：每位玩家颜色必须不同；玩家只有把<b>自己颜色</b>的方块推到顶端(15)才有获胜资格。</div>
-   <div class="row" style="margin-top:8px"><button class="primary" id="ngGo">开始</button><button id="ngCancel">取消</button></div>`;
+   <div style="font-size:12px;color:#5a4634">${tr('ng.tip')}</div>
+   <div class="row" style="margin-top:8px"><button class="primary" id="ngGo">${tr('btn.start')}</button><button id="ngCancel">${tr('btn.cancel')}</button></div>`;
   bg.classList.add('show');
   const upd=()=>{ const n=+document.getElementById('ngN').value; m.querySelectorAll('#ngP .row').forEach((r,i)=>r.style.display=i<n?'':'none'); };
   document.getElementById('ngN').onchange=upd; upd();
   document.getElementById('ngCancel').onclick=()=>bg.classList.remove('show');
   document.getElementById('ngGo').onclick=()=>{
     const n=+document.getElementById('ngN').value; const herald=document.getElementById('ngH').value; const board=document.getElementById('ngB').value;
-    const players=[]; m.querySelectorAll('#ngP .row').forEach((r,i)=>{ const lv=+r.querySelector('.bot').value; players.push({name:r.querySelector('input').value.trim()||('玩家'+(i+1)), color:r.querySelector('.col').value, bot:lv>0, level:lv}); });
-    const use=players.slice(0,n); const cols=new Set(use.map(p=>p.color)); if (cols.size!==n){ alert('玩家颜色不能重复'); return; }
+    const players=[]; m.querySelectorAll('#ngP .row').forEach((r,i)=>{ const lv=+r.querySelector('.bot').value; players.push({name:r.querySelector('input').value.trim()||tr('player_n',{n:i+1}), color:r.querySelector('.col').value, bot:lv>0, level:lv}); });
+    const use=players.slice(0,n); const cols=new Set(use.map(p=>p.color)); if (cols.size!==n){ alert(tr('ng.colorDup')); return; }
     localStorage.setItem('casc_cfg', JSON.stringify({n,herald,board,players}));
     bg.classList.remove('show');
     startGame({players:use, herald, board});
@@ -1342,9 +1635,9 @@ function openNewGame(){
 const cleanNick=(s,d)=>{ s=String(s||'').replace(/[<>&"']/g,'').trim().slice(0,12); return s||d; };   // 昵称会进 innerHTML，入口处去掉标签字符
 function startGame(cfg){
   if (NET.on) netLeave();
-  if (cfg && cfg.players) cfg.players.forEach((p,i)=>{ p.name=cleanNick(p.name,'玩家'+(i+1)); });
+  if (cfg && cfg.players) cfg.players.forEach((p,i)=>{ p.name=cleanNick(p.name,tr('player_n',{n:i+1})); });
   if (UI.resolve){ const r=UI.resolve; UI.resolve=null; UI.mode='idle'; r(null); }
-  S=newState(cfg); HISTORY=[]; recInit(S,false); log(S, `新游戏开始：${S.players.map((p,i)=>pname(S,i)).join('、')}；起始玩家 ${pname(S,S.start)}`, 't0');
+  S=newState(cfg); HISTORY=[]; recInit(S,false); log(S, 'log.newGame', {names:S.players.map((p,i)=>pname(S,i)), startPn:pname(S,S.start)}, 't0');
   save(); render(); setTimeout(gameLoop, 50);
 }
 function save(){ if (NET.on) return; try{ localStorage.setItem('casc_state', JSON.stringify(S)); }catch(e){} }
@@ -1354,29 +1647,13 @@ function undo(){
   const snap=HISTORY.pop();
   if (UI.resolve){ const r=UI.resolve; UI.resolve=null; UI.mode='idle'; UI.pick=null; UI.targets=null; r(null); }
   document.getElementById('modalBg').classList.remove('show');
-  S=snap; setBoard(S.boardId||'front'); recPush({a:'undo',turn:S.turn.num}); log(S,'↩ 撤销到本回合开始前'); save(); render(); setTimeout(gameLoop, 50);
+  S=snap; setBoard(S.boardId||'front'); recPush({a:'undo',turn:S.turn.num}); log(S,'log.undoLocal'); save(); render(); setTimeout(gameLoop, 50);
 }
 document.getElementById('btnNew').onclick=openNewGame;
 document.getElementById('btnUndo').onclick=undo;
 document.getElementById('btnRules').onclick=()=>{
   const bg=document.getElementById('modalBg'), m=document.getElementById('modal');
-  m.innerHTML=`<h3>规则摘要</h3><div class="rules">
-  <h4>回合</h4><ul><li>轮到你时，把 1 枚使者放到任意<b>空的田野格</b>（不能放城镇）。放完即结束回合，但可能触发城镇计分。</li></ul>
-  <h4>群与城镇计分</h4><ul><li><b>群</b>：≥2 枚同色使者相邻连通。单枚使者不是群。</li>
-  <li>把使者放在城镇旁时，若①它属于一个群，且②这个群在放置前<b>没有</b>其他成员与该城镇相邻（首次接触），则触发该城镇计分。多座相邻城镇各自判断。</li>
-  <li>单枚使者旁有城镇时，可压上一枚<b>印章</b>视同成群来触发计分。</li>
-  <li>计分：在对应颜色成功轨推进方块——你是第一个放到该城镇旁的使者（任何颜色）则 +1 格，否则 +2 格；城镇有<b>使者棋</b>再 +1 格。</li></ul>
-  <h4>成功轨动作</h4><ul><li>方块经过或停在有横幅的格子就触发（低格先结算）：分数（两数者先到取大）、▲ 推进任一方块 1 格（可连锁）、⤴ 本回合结束后再来一回合（永远最后执行）。</li>
-  <li>◉ 折叠格只在<b>正好停住</b>时生效：有印章则必须取走；印章已被人取走则可移动你的一枚使者到相邻空格（不触发计分）。</li>
-  <li>✕ 禁行格：不能停在上面，会停到其下方一格；只有 2/3 格的推进才能跃过。首次到达其下方格时触发该格动作。</li></ul>
-  <h4>成就</h4><ul><li>6 项独占成就各 +3 分（先达成者得）；每色「一个群连接 2 座同色城镇」+2 分（每人每色一次），五色全齐再 +10。</li></ul>
-  <h4>结束与胜负</h4><ul><li>任一回合结束时有人 ≥50 分，或有人该放使者却没有了，游戏结束。</li>
-  <li><b>只有自己颜色的方块到达顶端 (15) 的玩家有获胜资格</b>，其中分数最高者胜；无人达标则最高分小胜。平手由首轮中后行动者胜。</li></ul>
-  <h4>背面·农夫板</h4><ul><li>地图更少城镇（26 座），24 个绿色农夫格开局各盖一块面朝上的农夫板块。</li>
-  <li>农夫格是田野，但对你<b>上锁</b>：只有当你有一枚使者与它相邻时才对你解锁（🔒 虚线边=对当前玩家上锁），之后才能把使者放上去；使者一旦放上（或经「移动使者」移入），立即执行板块动作：+2/+3 分、▲推进任一方块 1 格、⤴再来一回合、或把任一使者棋移到没有使者棋且有空邻格的城镇。板块留在原地，搬走后可再次触发。</li>
-  <li>放在农夫格上的使者同样按普通规则判断是否触发相邻城镇计分。</li></ul>
-  <h4>本复刻未实现</h4><ul><li>「2 枚可移动使者棋」高级变体；同一次落子触发多城镇时按固定顺序结算。</li></ul>
-  </div><div class="row"><button class="primary" onclick="document.getElementById('modalBg').classList.remove('show')">关闭</button></div>`;
+  m.innerHTML=`<h3>${tr('rules.title')}</h3><div class="rules">${tr('rules.body')}</div><div class="row"><button class="primary" onclick="document.getElementById('modalBg').classList.remove('show')">${tr('btn.close')}</button></div>`;
   bg.classList.add('show');
 };
 
@@ -1393,15 +1670,15 @@ function netConnect(room, pin, create){
   clearTimeout(NET.timer);
   if (NET.ws){ const old=NET.ws; NET.ws=null; try{ old.close(); }catch(e){} }
   const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws'); NET.ws=ws;
-  ws.onopen=()=>{ NET.backoff=1000; if (NET.creating) ws.send(JSON.stringify({t:'create', id:NET.id, ownerPin:NET.creating.ownerPin})); else ws.send(JSON.stringify({t:'hello', id:NET.id, room:NET.room, pin:NET.pin})); };
+  ws.onopen=()=>{ NET.backoff=1000; if (NET.creating) ws.send(JSON.stringify({t:'create', id:NET.id, ownerPin:NET.creating.ownerPin, lang:LANG})); else ws.send(JSON.stringify({t:'hello', id:NET.id, room:NET.room, pin:NET.pin, lang:LANG})); };
   ws.onmessage=ev=>{ let m; try{ m=JSON.parse(ev.data); }catch(e){ return; } netHandle(m); };
-  ws.onclose=()=>{ if (!NET.on || NET.ws!==ws) return; if (!NET.room){ NET.on=false; openOnline('连接服务器失败'); return; } setStatus('🔌 连接断开，正在重连…'); NET.timer=setTimeout(()=>netConnect(NET.room, NET.pin), NET.backoff); NET.backoff=Math.min(NET.backoff*2, 10000); };
+  ws.onclose=()=>{ if (!NET.on || NET.ws!==ws) return; if (!NET.room){ NET.on=false; openOnline(tr('net.connFail')); return; } setStatus(tr('net.reconnecting')); NET.timer=setTimeout(()=>netConnect(NET.room, NET.pin), NET.backoff); NET.backoff=Math.min(NET.backoff*2, 10000); };
 }
 function netLeave(){
   NET.on=false; clearTimeout(NET.timer); if (NET.ws){ const w=NET.ws; NET.ws=null; try{ w.send(JSON.stringify({t:'leave'})); w.close(); }catch(e){} }
   NET.view=null; NET.room=null; NET.pin=null; NET.me=-1; NET.creating=null; UI.mode='idle'; UI.pick=null; UI.targets=null; document.getElementById('modalBg').classList.remove('show');
   try{ localStorage.removeItem('casc_room'); }catch(e){}
-  history.replaceState(null,'',location.pathname); S=null; HISTORY=[]; render(); setStatus('已离开联机房间。点「联机」重新加入，或点「新游戏」在本机开一局。');
+  history.replaceState(null,'',location.pathname); S=null; HISTORY=[]; render(); setStatus(tr('net.left'));
 }
 function netHandle(m){
   if (m.t==='welcome'){ NET.room=m.code; NET.pin=m.pin; NET.creating=null; history.replaceState(null,'',location.pathname+'?room='+m.code+'&pin='+m.pin); try{ localStorage.setItem('casc_room', JSON.stringify({room:m.code,pin:m.pin})); }catch(e){} return; }
@@ -1411,38 +1688,36 @@ function netHandle(m){
     return; }
   if (m.t==='state') netApply(m);
 }
-const KIND_TEXT={place:'放置使者',cube:'选择要推进的方块',move:'移动使者',herald:'移动使者棋'};
 function netApply(v){
   NET.view=v; NET.me=v.me;
   if (v.st){ S=v.st; setBoard(S.boardId||'front'); } else S=null;
   render();
   const bg=document.getElementById('modalBg'), modal=document.getElementById('modal');
-  if (v.phase==='lobby'){ NET.resultShown=null; NET.askId=null; UI.mode='idle'; setStatus(`🌐 房间 ${v.code}：在大厅里坐下，等房主开始。`); renderLobby(v); return; }
+  if (v.phase==='lobby'){ NET.resultShown=null; NET.askId=null; UI.mode='idle'; setStatus(tr('net.lobby',{code:v.code})); renderLobby(v); return; }
   if (modal.dataset.kind==='lobby' && bg.classList.contains('show')){ bg.classList.remove('show'); modal.dataset.kind=''; NET.lobbySig=''; }
-  if (v.phase==='ended'){ UI.mode='idle'; setStatus(`🎉 对局结束。${v.isOwner?'点「再来一局」回到房间重新配置。':'等房主重开。'}`); if (S && NET.resultShown!==S.seed){ NET.resultShown=S.seed; showResult(); } return; }
+  if (v.phase==='ended'){ UI.mode='idle'; setStatus(tr('net.ended',{owner:!!v.isOwner})); if (S && NET.resultShown!==S.seed){ NET.resultShown=S.seed; showResult(); } return; }
   const p=v.pending; const nm=i=>S?pname(S,i):'';
   if (v.undo){ const u=v.undo;
-    if (u.by===NET.me) setStatus(`↩ 已请求撤销，等待其他玩家同意（${Object.values(u.votes).filter(Boolean).length}/${u.needed.length}）`);
+    if (u.by===NET.me) setStatus(tr('net.undoMine',{a:Object.values(u.votes).filter(Boolean).length, b:u.needed.length}));
     else if (u.needed.includes(NET.me) && u.votes[NET.me]===undefined && NET.undoShown!==u.t){ NET.undoShown=u.t; UI.mode='idle'; UI.pick=null; UI.targets=null; NET.askId=null; modal.dataset.kind='undo';   // 撤销结束后按当前 pending 重新恢复交互
-      showModal('撤销请求', `${nm(u.by)} 想撤销到自己上一手之前，这会同时回退之后所有人的行动。同意吗？`, [{label:'同意撤销',value:true},{label:'拒绝',value:false}], ok=>netSend({t:'undoVote',ok}), null); return; }
-    else if (!u.needed.includes(NET.me)) setStatus(`↩ ${nm(u.by)} 请求撤销，等待其他玩家表决…`);
+      showModal(tr('undo.title'), tr('undo.ask',{nm:nm(u.by)}), [{label:tr('undo.yes'),value:true},{label:tr('undo.no'),value:false}], ok=>netSend({t:'undoVote',ok}), null); return; }
+    else if (!u.needed.includes(NET.me)) setStatus(tr('net.undoOther',{nm:nm(u.by)}));
   }
   if (!v.undo && modal.dataset.kind==='undo' && bg.classList.contains('show')){ bg.classList.remove('show'); modal.dataset.kind=''; NET.askId=null; }   // 撤销已被拒绝/超时，收掉残留弹窗
-  if (!p){ UI.mode='idle'; if (!v.undo) setStatus(S ? `${nm(S.turn.player)} 行动中…` : '等待中…'); return; }
+  if (!p){ UI.mode='idle'; if (!v.undo) setStatus(S ? tr('net.moving',{nm:nm(S.turn.player)}) : tr('net.waiting')); return; }
   if (p.seat!==NET.me){
     UI.mode='idle'; UI.pick=null; UI.targets=null; NET.askId=null;
     if (bg.classList.contains('show') && modal.dataset.kind==='ask'){ bg.classList.remove('show'); modal.dataset.kind=''; }
-    if (!v.undo) setStatus(`等待 ${nm(p.seat)} ${KIND_TEXT[p.kind]||''}…${NET.me<0?'（你在旁观）':''}`); render(); return; }
+    if (!v.undo) setStatus(tr('net.waitFor',{nm:nm(p.seat), kind:p.kind, spect:NET.me<0})); render(); return; }
   if (NET.askId===p.id) return;
   NET.askId=p.id; const pl=P(S,NET.me);
-  if (p.kind==='place'){ UI.mode='place'; UI.pick=null; UI.targets=null; setStatus(`轮到你：请点击一个空格放置使者。${pl.seals>0?'（手中有印章，单独落在城镇旁时可选择使用）':''}`); }
-  else if (p.kind==='cube'){ UI.mode='idle'; modal.dataset.kind='ask'; showModal(p.why, '选择要推进 1 格的方块', p.opts.map(o=>({label:o.label,value:o.value,disabled:o.disabled,color:COL[o.value]})), val=>netAnswer(val), '放弃推进'); }
-  else if (p.kind==='move'){ UI.mode='move-from'; UI.pick=null; UI.targets=null; setStatus(`${p.why}。先点击你的一枚使者，再点击相邻空格；或 <button onclick="UI.finish(null)">跳过</button>`); }
-  else if (p.kind==='herald'){ UI.mode='herald-from'; UI.pick=null; UI.targets=new Set(p.opts.targets); if (S.heralds.length===1){ UI.pick=S.heralds[0]; UI.mode='herald-to'; } setStatus(`${p.why}。${UI.pick?'点击目标城镇（高亮）':'先点击要移动的使者棋，再点击目标城镇（高亮）'}；或 <button onclick="UI.finish(null)">跳过</button>`); }
+  if (p.kind==='place'){ UI.mode='place'; UI.pick=null; UI.targets=null; setStatus(tr('status.placeYou',{seals:pl.seals>0})); }
+  else if (p.kind==='cube'){ UI.mode='idle'; modal.dataset.kind='ask'; showModal(whyText(p.why), tr('modal.cubeTitle'), p.opts.map(o=>({label:tr('opt.cube',o),value:o.value,disabled:o.blocked,color:COL[o.value]})), val=>netAnswer(val), tr('modal.cubeCancel')); }
+  else if (p.kind==='move'){ UI.mode='move-from'; UI.pick=null; UI.targets=null; setStatus(tr('status.move',{why:whyText(p.why)})); }
+  else if (p.kind==='herald'){ UI.mode='herald-from'; UI.pick=null; UI.targets=new Set(p.opts.targets); if (S.heralds.length===1){ UI.pick=S.heralds[0]; UI.mode='herald-to'; } setStatus(tr('status.herald',{why:whyText(p.why), picked:!!UI.pick})); }
   render();
 }
-function netAnswer(val){ const id=NET.askId; NET.askId=null; UI.mode='idle'; UI.pick=null; UI.targets=null; document.getElementById('modal').dataset.kind=''; render(); if (id){ netSend({t:'answer', id, value:val}); setStatus('已提交，等待服务器确认…'); } }
-const LV_TEXT={0:'真人',1:'电脑·简单',2:'电脑·普通',3:'电脑·困难'};
+function netAnswer(val){ const id=NET.askId; NET.askId=null; UI.mode='idle'; UI.pick=null; UI.targets=null; document.getElementById('modal').dataset.kind=''; render(); if (id){ netSend({t:'answer', id, value:val}); setStatus(tr('net.submitted')); } }
 function renderLobby(v){
   const bg=document.getElementById('modalBg'), m=document.getElementById('modal');
   const sig=JSON.stringify([v.code,v.cfg,v.seats,v.isOwner,v.watchers]); if (m.dataset.kind==='lobby' && bg.classList.contains('show') && sig===NET.lobbySig) return; NET.lobbySig=sig;
@@ -1450,21 +1725,21 @@ function renderLobby(v){
   const link=location.origin+location.pathname+'?room='+v.code+'&pin='+v.pin;
   const seatRow=(s,i)=>{ const active=i<v.cfg.n; const human=s.level===0;
     return `<div class="row lb-seat" style="${active?'':'opacity:.4'}"><span style="width:20px">${i+1}.</span>
-      ${v.isOwner?`<select class="lb-col" data-i="${i}">${PLAYER_COLORS.map(c=>`<option value="${c}" ${s.color===c?'selected':''}>${CNAME[c]}</option>`).join('')}</select><select class="lb-lv" data-i="${i}">${[0,1,2,3].map(l=>`<option value="${l}" ${s.level===l?'selected':''}>${LV_TEXT[l]}</option>`).join('')}</select>`
-      :`<span class="tag" style="background:${COL[s.color]};width:16px;height:16px"></span><span style="min-width:64px">${CNAME[s.color]}</span><span style="min-width:64px">${LV_TEXT[s.level]}</span>`}
-      ${human ? (s.taken ? `<b>${s.name}</b>${s.mine?'（我）':''}${s.online?'':' <span class="badge">离线</span>'}${s.mine?` <button class="lb-stand">起身</button>`:''}` : (active?`<button class="lb-sit" data-i="${i}">坐这里</button>`:'')) : ''}
+      ${v.isOwner?`<select class="lb-col" data-i="${i}">${PLAYER_COLORS.map(c=>`<option value="${c}" ${s.color===c?'selected':''}>${tr('color.'+c)}</option>`).join('')}</select><select class="lb-lv" data-i="${i}">${[0,1,2,3].map(l=>`<option value="${l}" ${s.level===l?'selected':''}>${tr('lv.'+l)}</option>`).join('')}</select>`
+      :`<span class="tag" style="background:${COL[s.color]};width:16px;height:16px"></span><span style="min-width:64px">${tr('color.'+s.color)}</span><span style="min-width:64px">${tr('lv.'+s.level)}</span>`}
+      ${human ? (s.taken ? `<b>${s.name}</b>${s.mine?tr('lobby.me'):''}${s.online?'':' <span class="badge">'+tr('lobby.offline')+'</span>'}${s.mine?` <button class="lb-stand">${tr('lobby.stand')}</button>`:''}` : (active?`<button class="lb-sit" data-i="${i}">${tr('lobby.sit')}</button>`:'')) : ''}
     </div>`; };
-  m.innerHTML=`<h3>联机房间 ${v.code}</h3>
-    <div class="row"><span>邀请链接</span><input type="text" readonly value="${link}" style="flex:1;min-width:220px" onclick="this.select()"><button id="lbCopy">复制</button></div>
-    <div class="row" style="font-size:12px;color:#5a4634">朋友也可以在「联机 → 加入房间」手动输入：房间码 <b>${v.code}</b>，配对码 <b>${v.pin}</b>${v.watchers>1?`。当前在线 ${v.watchers} 人`:''}</div>
-    ${v.sitePin?`<div class="row" style="font-size:12px;color:#5a4634">没有邀请链接的朋友进站点要先输入站点配对码：<b>${v.sitePin}</b>（只有房主能看到）</div>`:''}
-    ${v.isOwner?`<div class="row"><label>人数 <select id="lbN">${[2,3,4].map(n=>`<option ${v.cfg.n===n?'selected':''}>${n}</option>`).join('')}</select></label>
-      <label>版图 <select id="lbB"><option value="front" ${v.cfg.board==='front'?'selected':''}>正面（36 城，标准）</option><option value="back" ${v.cfg.board==='back'?'selected':''}>背面（26 城 + 24 农夫板块）</option></select></label>
-      <label>使者棋 <select id="lbH"><option value="star" ${v.cfg.herald==='star'?'selected':''}>★ 城镇（标准）</option><option value="o" ${v.cfg.herald==='o'?'selected':''}>● 城镇</option><option value="x" ${v.cfg.herald==='x'?'selected':''}>✖ 城镇</option></select></label></div>`
-     :`<div class="row" style="font-size:12px">${v.cfg.n} 人 · ${v.cfg.board==='back'?'背面农夫板':'正面标准版图'} · 使者棋在 ${({star:'★',o:'●',x:'✖'})[v.cfg.herald]} 城镇（房主设置）</div>`}
-    <div class="row"><label>我的昵称 <input type="text" id="lbName" value="${NET.nameDraft.replace(/"/g,'')}" placeholder="坐下前先填" style="width:120px" maxlength="12"></label></div>
+  m.innerHTML=`<h3>${tr('lobby.title',{code:v.code})}</h3>
+    <div class="row"><span>${tr('lobby.link')}</span><input type="text" readonly value="${link}" style="flex:1;min-width:220px" onclick="this.select()"><button id="lbCopy">${tr('lobby.copy')}</button></div>
+    <div class="row" style="font-size:12px;color:#5a4634">${tr('lobby.manual',{code:v.code, pin:v.pin, n:v.watchers})}</div>
+    ${v.sitePin?`<div class="row" style="font-size:12px;color:#5a4634">${tr('lobby.sitePin',{pin:v.sitePin})}</div>`:''}
+    ${v.isOwner?`<div class="row"><label>${tr('lobby.n')} <select id="lbN">${[2,3,4].map(n=>`<option ${v.cfg.n===n?'selected':''}>${n}</option>`).join('')}</select></label>
+      <label>${tr('lobby.board')} <select id="lbB"><option value="front" ${v.cfg.board==='front'?'selected':''}>${tr('ng.front')}</option><option value="back" ${v.cfg.board==='back'?'selected':''}>${tr('ng.back')}</option></select></label>
+      <label>${tr('lobby.herald')} <select id="lbH"><option value="star" ${v.cfg.herald==='star'?'selected':''}>${tr('lobby.heraldStar')}</option><option value="o" ${v.cfg.herald==='o'?'selected':''}>${tr('lobby.heraldO')}</option><option value="x" ${v.cfg.herald==='x'?'selected':''}>${tr('lobby.heraldX')}</option></select></label></div>`
+     :`<div class="row" style="font-size:12px">${tr('lobby.summary',{n:v.cfg.n, board:v.cfg.board, icon:({star:'★',o:'●',x:'✖'})[v.cfg.herald]})}</div>`}
+    <div class="row"><label>${tr('lobby.name')} <input type="text" id="lbName" value="${NET.nameDraft.replace(/"/g,'')}" placeholder="${tr('lobby.namePh')}" style="width:120px" maxlength="12"></label></div>
     <div id="lbSeats">${v.seats.map(seatRow).join('')}</div>
-    <div class="row" style="margin-top:8px">${v.isOwner?`<button class="primary" id="lbStart">开始对局</button>`:`<span style="font-size:12px;color:#5a4634">等房主开始…</span>`}<button id="lbLeave">离开房间</button></div>`;
+    <div class="row" style="margin-top:8px">${v.isOwner?`<button class="primary" id="lbStart">${tr('lobby.start')}</button>`:`<span style="font-size:12px;color:#5a4634">${tr('lobby.waitHost')}</span>`}<button id="lbLeave">${tr('lobby.leave')}</button></div>`;
   bg.classList.add('show');
   if (v.isOwner){
     const cfgSend=()=>{ const seats=[...m.querySelectorAll('.lb-seat')].map(r=>({color:r.querySelector('.lb-col').value, level:+r.querySelector('.lb-lv').value}));
@@ -1475,22 +1750,22 @@ function renderLobby(v){
   document.getElementById('lbName').oninput=e=>{ NET.nameDraft=e.target.value; };
   m.querySelectorAll('.lb-sit').forEach(b=>b.onclick=()=>{ const name=(document.getElementById('lbName').value||'').trim(); if (!name){ document.getElementById('lbName').focus(); return; } try{ localStorage.setItem('casc_name',name); }catch(e){} netSend({t:'sit', seat:+b.dataset.i, name}); });
   m.querySelectorAll('.lb-stand').forEach(b=>b.onclick=()=>netSend({t:'stand'}));
-  document.getElementById('lbCopy').onclick=()=>{ const done=()=>{ document.getElementById('lbCopy').textContent='已复制'; };
+  document.getElementById('lbCopy').onclick=()=>{ const done=()=>{ document.getElementById('lbCopy').textContent=tr('lobby.copied'); };
     (navigator.clipboard?navigator.clipboard.writeText(link):Promise.reject()).then(done).catch(()=>{ const inp=m.querySelector('input[readonly]'); inp.select(); try{ document.execCommand('copy'); }catch(e){} done(); }); };
   document.getElementById('lbLeave').onclick=netLeave;
 }
 function openOnline(msg){
   const bg=document.getElementById('modalBg'), m=document.getElementById('modal'); m.dataset.kind='online';
   let saved=null; try{ saved=JSON.parse(localStorage.getItem('casc_room')||'null'); }catch(e){}
-  m.innerHTML=`<h3>联机</h3>${msg?`<div class="status" style="margin-bottom:8px">⚠️ ${msg}</div>`:''}
-   <h4 style="margin:6px 0 2px;color:var(--walnut)">加入房间</h4>
-   <div class="row"><input type="text" id="onRoom" placeholder="房间码" value="${saved?saved.room:''}" style="width:120px;text-transform:uppercase" maxlength="8"><input type="text" id="onPin" placeholder="配对码" value="${saved?saved.pin:''}" style="width:120px" maxlength="8" inputmode="numeric"><button class="primary" id="onJoin">加入</button></div>
-   <div style="font-size:12px;color:#5a4634">拿到邀请链接的话直接打开链接即可，不用手填。</div>
-   <h4 style="margin:12px 0 2px;color:var(--walnut)">创建房间（房主）</h4>
-   <div class="row"><input type="password" id="onOwner" placeholder="房主口令" style="width:150px"><button id="onCreate">创建房间</button></div>
-   <h4 style="margin:12px 0 2px;color:var(--walnut)">不联机</h4>
-   <div class="row"><button id="onLocal">本机新游戏（和电脑或同屏朋友玩）</button></div>
-   <div class="row" style="margin-top:10px"><button id="onCancel">取消</button></div>`;
+  m.innerHTML=`<h3>${tr('on.title')}</h3>${msg?`<div class="status" style="margin-bottom:8px">⚠️ ${msg}</div>`:''}
+   <h4 style="margin:6px 0 2px;color:var(--walnut)">${tr('on.join')}</h4>
+   <div class="row"><input type="text" id="onRoom" placeholder="${tr('on.roomPh')}" value="${saved?saved.room:''}" style="width:120px;text-transform:uppercase" maxlength="8"><input type="text" id="onPin" placeholder="${tr('on.pinPh')}" value="${saved?saved.pin:''}" style="width:120px" maxlength="8" inputmode="numeric"><button class="primary" id="onJoin">${tr('on.joinBtn')}</button></div>
+   <div style="font-size:12px;color:#5a4634">${tr('on.linkHint')}</div>
+   <h4 style="margin:12px 0 2px;color:var(--walnut)">${tr('on.create')}</h4>
+   <div class="row"><input type="password" id="onOwner" placeholder="${tr('on.ownerPh')}" style="width:150px"><button id="onCreate">${tr('on.createBtn')}</button></div>
+   <h4 style="margin:12px 0 2px;color:var(--walnut)">${tr('on.offline')}</h4>
+   <div class="row"><button id="onLocal">${tr('on.local')}</button></div>
+   <div class="row" style="margin-top:10px"><button id="onCancel">${tr('btn.cancel')}</button></div>`;
   bg.classList.add('show');
   document.getElementById('onLocal').onclick=()=>{ bg.classList.remove('show'); m.dataset.kind=''; openNewGame(); };
   document.getElementById('onJoin').onclick=()=>{ const r=document.getElementById('onRoom').value.trim().toUpperCase(), pn=document.getElementById('onPin').value.trim(); if(!r||!pn) return; bg.classList.remove('show'); m.dataset.kind=''; netConnect(r,pn); };
@@ -1535,20 +1810,20 @@ window.__selftest = async function(n=5, matchup){
   let v0=null;
   async function chk(){ try{ const r=await (await fetch('api/version',{cache:'no-store'})).json();
     if (v0===null) v0=r.v; else if (r.v!==v0){ const el=document.getElementById('status');
-      if (!el.innerHTML.includes('新版本')) el.innerHTML='⚠️ <b>页面有新版本</b>（AI/功能已更新），请在本回合结束后刷新页面。'+el.innerHTML; } }catch(e){} }
+      if (!el.querySelector('.newver')) el.innerHTML=tr('ver.new')+el.innerHTML; } }catch(e){} }
   chk(); setInterval(chk, 4*60*1000);
 })();
 /* =====================  启动  ===================== */
 (function init(){
   try{ NET.nameDraft=localStorage.getItem('casc_name')||''; }catch(e){}
   const q=new URLSearchParams(location.search); const room=q.get('room'), pin=q.get('pin');
-  if (room && pin){ render(); setStatus('正在连接房间…'); netConnect(room.toUpperCase(), pin); return; }
+  if (room && pin){ render(); setStatus(tr('boot.connecting')); netConnect(room.toUpperCase(), pin); return; }
   if (window.CASC_ONLINE){ let saved=null; try{ saved=JSON.parse(localStorage.getItem('casc_room')||'null'); }catch(e){}
-    if (saved && saved.room && saved.pin){ render(); setStatus('正在重新连接上次的房间…'); netConnect(String(saved.room).toUpperCase(), String(saved.pin)); return; } }
-  try{ const s=JSON.parse(localStorage.getItem('casc_state')||'null'); if (s && s.players){ S=s; S.players.forEach((p,i)=>{ p.name=cleanNick(p.name,'玩家'+(i+1)); }); setBoard(S.boardId||'front'); if(!S.farmerTiles) S.farmerTiles={}; if(S.ended){ render(); return; } recInit(S,true); render(); setTimeout(gameLoop,50); return; } }catch(e){}
+    if (saved && saved.room && saved.pin){ render(); setStatus(tr('boot.reconnecting')); netConnect(String(saved.room).toUpperCase(), String(saved.pin)); return; } }
+  try{ const s=JSON.parse(localStorage.getItem('casc_state')||'null'); if (s && s.players){ S=s; S.players.forEach((p,i)=>{ p.name=cleanNick(p.name,tr('player_n',{n:i+1})); }); setBoard(S.boardId||'front'); if(!S.farmerTiles) S.farmerTiles={}; if(S.ended){ render(); return; } recInit(S,true); render(); setTimeout(gameLoop,50); return; } }catch(e){}
   render();
-  if (window.CASC_ONLINE){ setStatus('点「联机」加入朋友的房间；也可以点「新游戏」在本机和电脑玩。'); openOnline(); }
-  else { setStatus('点击右上角「新游戏」开始。'); openNewGame(); }
+  if (window.CASC_ONLINE){ setStatus(tr('boot.online')); openOnline(); }
+  else { setStatus(tr('boot.local')); openNewGame(); }
 })();
 </script>
 </body>

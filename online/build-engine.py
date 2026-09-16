@@ -8,7 +8,7 @@ b = src.index('/* =====================  人类决策（UI）')
 code = src[a:b]
 out = "/* 自动生成：python3 online/build-engine.py —— 请勿手改，改 index.html 后重新生成 */\nconst window=globalThis; const sleep=ms=>new Promise(r=>setTimeout(r,ms));\n" + code + """
 module.exports={newState,runTurn,botDecide,legalFields,canUseSealHere,heraldTargets,setBoard,trackDef,evalPlacement,farmerUnlocked,
-  TOP,TRACK_COLORS,PLAYER_COLORS,CNAME,CSHORT,COL,BOARDS,BOT_TUNE,
+  TOP,TRACK_COLORS,PLAYER_COLORS,COL,BOARDS,BOT_TUNE,I18N,tr,setLang,log,logText,cubeOptions,
   ff:()=>FIELD_FIELDS, ft:()=>FIELD_TOWNS, tf:()=>TOWN_FIELDS, nb:()=>NB, town:()=>TOWN, farmer:()=>FARMER, groupOf, botPickCube, botPickCubeSim, stateFeatures, phi, setValueNet:(n)=>{ VALUE_NET=n; }, simEval, botMoveEnvoyExport:botMoveEnvoy, decideWinner};
 """
 pathlib.Path(__file__).resolve().parent.joinpath('engine.js').write_text(out, encoding='utf-8')

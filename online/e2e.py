@@ -36,9 +36,9 @@ async def main():
             k=await pg.evaluate("""()=>{ const me=NET.me; const legal=legalFields(S,me); let best=null; for (const k of legal){ if (evalPlacement(S,k,me,false).scorings.length){ best=k; break; } }
                 if (!best){ const near=legal.filter(k=>FIELD_TOWNS[k].length); best=near[Math.floor(Math.random()*near.length)]; }
                 document.querySelector(`polygon[data-k="${best}"]`).dispatchEvent(new MouseEvent('click',{bubbles:true})); return best; }""")
-            # 若弹出印章询问则不用印章
+            # 若弹出印章询问则不用印章（弹窗 dataset.kind='seal'，与界面语言无关）
             await pg.wait_for_timeout(150)
-            if await pg.evaluate("document.getElementById('modalBg').classList.contains('show') && document.getElementById('modal').innerText.includes('使用印章')"):
+            if await pg.evaluate("document.getElementById('modalBg').classList.contains('show') && document.getElementById('modal').dataset.kind==='seal'"):
                 await pg.click('#modal button[data-i="1"]')
             await A.wait_for_function(f"S && (S.turn.num>{v['turn']} || (NET.view.pending && NET.view.pending.kind!=='place'))", timeout=8000)
             # 处理可能的推进选择弹窗（chooseCube）

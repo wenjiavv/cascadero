@@ -30,6 +30,9 @@ python3 serve.py 5235        # 打开 http://localhost:5235/
 # 设 CASC_HOST=127.0.0.1 可只留本机
 ```
 
+界面中英双语：默认跟随浏览器语言（`zh-*` 为中文，其余英文），页头的 **EN / 中文** 按钮或 `?lang=en` / `?lang=zh`
+可以切换并记住。对局记录和服务器提示按「消息键」存储、由各自的客户端渲染，同一房间里的玩家可以各用各的语言。
+
 跑 AI 工具（Node 18+，在 22/25 上测过）：
 
 ```bash
@@ -221,7 +224,7 @@ NOTICE.md 里说的权利问题。
 ## 目录结构
 
 ```
-index.html              游戏 + 引擎 + AI（单文件，中文界面）
+index.html              游戏 + 引擎 + AI（单文件，中 / 英双语界面）
 serve.py                本地静态服务 + /api/gamelog
 Dockerfile, .dockerignore, docker-compose.yml, .env.example   牌桌打包（构建上下文=仓库根）
 online/
