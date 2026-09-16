@@ -11,7 +11,7 @@ The rules are a fan re-implementation of *Cascadero* (Reiner Knizia, Bitewing Ga
 project is unofficial and non-commercial, all art and UI are original, and the AI is the point.
 See [Legal notice](#legal-notice) and [NOTICE.md](NOTICE.md).
 
-![desktop](docs/screenshot-desktop.png)
+![desktop](docs/screenshot-desktop-en.png)
 
 ## What is in the box
 
@@ -292,7 +292,7 @@ online/
   tune-back/            tuning log and anchor state from the last run
 selfplay/               many-core hill-climb (tuner.py/validate.py, match.js game CLI) and its logs
 data/                   sample dataset
-docs/                   screenshots
+docs/                   screenshots (-en / -zh, desktop + mobile)
 ```
 
 ## Legal notice

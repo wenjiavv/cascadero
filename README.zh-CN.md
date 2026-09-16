@@ -8,7 +8,7 @@
 规则是对《Cascadero》（Reiner Knizia 设计，Bitewing Games 出版）的粉丝复刻。本项目非官方、
 非商业，美术和界面全部原创，重点在 AI。详见 [法律声明](#法律声明) 与 [NOTICE.md](NOTICE.md)。
 
-![desktop](docs/screenshot-desktop.png)
+![desktop](docs/screenshot-desktop-zh.png)
 
 ## 仓库里有什么
 
@@ -244,7 +244,7 @@ online/
   tune-back/            上一轮调参的日志与锚点
 selfplay/               多核机爬山调参（tuner.py/validate.py，match.js 对局 CLI）及其日志
 data/                   样本数据集
-docs/                   截图
+docs/                   截图（-en / -zh，桌面 + 手机）
 ```
 
 ## 法律声明

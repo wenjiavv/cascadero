@@ -84,7 +84,8 @@ body.wide .log{flex:1 1 0;min-height:320px;height:0}
 .pl{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;border:1px solid #d9c49a;border-left:5px solid transparent;background:#fffaee}
 .pl.active{border-color:var(--brass);border-left-color:var(--brass);background:#fff6d6;box-shadow:0 0 0 2px rgba(217,168,58,.35)}
 .pl .dot{width:20px;height:20px;border-radius:50%;border:2px solid #2b1a0c;flex:none}
-.pl .nm{font-weight:600;min-width:64px}
+.pl .nm{font-weight:600;min-width:64px;flex:none;white-space:nowrap}
+.pl .nm .lv{font-size:11px;font-weight:500;color:#7a5a3a;margin-left:4px}   /* 电脑档位小字，跟名字同一行 */
 .pl .st{font-size:12px;color:#5a4634;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .pl .vp{font:700 22px/1 var(--serif);margin-left:auto;min-width:34px;text-align:right}
 .pl .up{color:#5a3a00;font-weight:700;background:var(--brass2);border-radius:3px;padding:0 3px}
@@ -155,7 +156,7 @@ main>*{min-width:0}
   #map{width:520px;max-width:none}
   .mapP h2 .badge{white-space:normal}
   .pl{gap:8px;padding:6px 8px}
-  .pl .nm{min-width:0}
+  .pl .nm{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
   .ach{grid-template-columns:1fr}
   .log{height:200px}
 }
@@ -1491,7 +1492,7 @@ function renderPlayers(){
   const fx=FXS||fxSummary();
   el.innerHTML=S.players.map((p,i)=>{ const agg=fx.vp[i]; const an=agg?fxA(agg.e):null;
     return `<div class="pl ${!S.ended&&i===S.turn.player?'active':''}">
-    <span class="dot" style="background:${COL[p.color]}"></span><span class="nm">${p.name}${p.bot?' 🤖'+({1:tr('lv.short.1'),2:tr('lv.short.2'),3:tr('lv.short.3')}[p.level]||''):''}</span>
+    <span class="dot" style="background:${COL[p.color]}"></span><span class="nm">${p.name}${p.bot?`<span class="lv">🤖${({1:tr('lv.short.1'),2:tr('lv.short.2'),3:tr('lv.short.3')}[p.level]||'')}</span>`:''}</span>
     <span class="st"><span>${tr('pl.envoys',{n:p.envoys})}</span><span>${tr('pl.seals',{n:p.seals})}</span><span>${tr('pl.own',{c:p.color, p:p.cubes[p.color]})} ${p.cubes[p.color]>=TOP?'✅':''}</span>
     <span>${TRACK_COLORS.map(c=>`<span class="tag" style="background:${COL[c]}"></span><span class="${fx.cubes[i+':'+c]?'up':''}">${p.cubes[c]}</span>`).join(' ')}</span></span>
     <span class="vp ${an?'bump':''}" style="${an?`animation-delay:${an.delay}ms`:''}">${p.vp}</span>${agg?`<span class="delta">+${agg.to-agg.from}</span>`:''}</div>`; }).join('');
