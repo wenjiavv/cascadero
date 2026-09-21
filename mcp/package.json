@@ -1,0 +1,22 @@
+{
+  "name": "cascadero-mcp",
+  "version": "0.1.0",
+  "description": "MCP server that lets AI agents play Cascadero (unofficial fan implementation) through text tool calls",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "cascadero-mcp": "src/index.mjs"
+  },
+  "scripts": {
+    "start": "node src/index.mjs",
+    "test": "node test/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.6.5"
+  }
+}

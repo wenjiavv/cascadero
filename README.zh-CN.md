@@ -19,6 +19,7 @@
 | 多核机自对弈调参 | `selfplay/` | 产出当前启发式权重的爬山调参器与终验脚本（2.67 万局）。 |
 | 数据集与模型 | `data/`、`online/valuenet.json`、GitHub Releases | 3.2 万局自对弈特征样本（JSONL）和已训练的估值网络。 |
 | 自托管私人牌桌 | `online/server.js` | 邀请制 WebSocket 服务器，几个朋友远程用同一引擎对局。不是公开服务。 |
+| 给 AI 用的 MCP 服务 | `mcp/` | 让 Claude Code、Claude Desktop、Cursor 等任何 MCP 客户端只靠文字工具调用就能和电脑下完整对局，不用截屏。见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md)。 |
 
 ## 快速开始
 
@@ -190,6 +191,20 @@ index.html ──build-engine.py──▶ engine.js ──selfplay.js──▶ s
 有偏模拟器产的数据仍然有用：线上模型就是在它们上训练的，修复后照样好用，这本身就是一个数据点
 （模型对偏差不敏感，搜索才敏感）。
 
+## 让 AI 来下（MCP）
+
+`mcp/` 是包在同一套无头引擎外面的 [MCP](https://modelcontextprotocol.io) 服务。AI 开局后以文字读局面（摘要、字符六边形
+地图、每个合法落点的精确事实），回答引擎会问的四种决策；每次调用都会拿回对手的应对和下一个决策。不合法的答复会被拒绝并
+说明原因，局面不变。另带规则与策略手册、「问内置电脑」工具、撤销、存档续局，以及会回灌进手册的赛后笔记。
+
+```bash
+cd mcp && npm install
+claude mcp add cascadero -e CASC_MCP_LANG=zh -- node "$PWD/src/index.mjs"     # Claude Code；其他客户端见 mcp/README.zh-CN.md
+```
+
+然后说一句「和普通档下一局卡斯卡德罗」。工具、资料和配置见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md)；`npm test` 会走真实协议
+下三整局。
+
 ## 自托管私人牌桌
 
 `online/server.js` 让几个朋友远程用同一引擎对局。它从设计上就是**私有的**，不是公开游戏站：
@@ -242,6 +257,7 @@ online/
   diag-stuck.js         "卡在禁行格下"诊断
   valuenet.json         线上模型
   tune-back/            上一轮调参的日志与锚点
+mcp/                    MCP 服务：AI 通过工具调用下棋（src/index.mjs 工具、game.mjs 回合循环、view.mjs 文字视图、data/ 手册、test/smoke.mjs）
 selfplay/               多核机爬山调参（tuner.py/validate.py，match.js 对局 CLI）及其日志
 data/                   样本数据集
 docs/                   截图（-en / -zh，桌面 + 手机）

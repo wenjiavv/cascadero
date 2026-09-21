@@ -22,6 +22,7 @@ See [Legal notice](#legal-notice) and [NOTICE.md](NOTICE.md).
 | Self-play tuning on a many-core box | `selfplay/` | The hill-climb tuner and validation runs that produced the current heuristic weights (26.7k games). |
 | Datasets and models | `data/`, `online/valuenet.json`, GitHub Releases | 32k self-play games as JSONL features, plus the trained value net. |
 | Self-hosted private table | `online/server.js` | Invite-only WebSocket server so a few friends can play remotely with the same engine. Not a public service. |
+| MCP server for AI agents | `mcp/` | Lets Claude Code, Claude Desktop, Cursor or any other MCP client play full games against the bots through text tool calls — no screen capture. See [mcp/README.md](mcp/README.md). |
 
 ## Quick start
 
@@ -229,6 +230,23 @@ Datasets from the biased simulator are still useful: the deployed model was trai
 survived the fix, which is itself a data point (the model is insensitive to the bias; the search
 was not).
 
+## Let an AI agent play (MCP)
+
+`mcp/` is a [Model Context Protocol](https://modelcontextprotocol.io) server around the same headless engine. An
+agent starts a game, reads the position as text (summary, ASCII hex map, exact facts for every legal placement),
+answers the four kinds of decision the engine asks for, and gets the opponents' replies plus the next decision
+back from every call. Illegal answers are refused with the reason and change nothing. It also ships a rules and
+strategy handbook, an "ask the built-in bot" tool, undo, saved games, and post-game notes that are fed back into
+the handbook for the next game.
+
+```bash
+cd mcp && npm install
+claude mcp add cascadero -- node "$PWD/src/index.mjs"     # Claude Code; other clients: see mcp/README.md
+```
+
+Then: *"Play a game of Cascadero against the normal bot."* Tools, resources and configuration are listed in
+[mcp/README.md](mcp/README.md); `npm test` plays three complete games over the real protocol.
+
 ## Self-hosted private table
 
 `online/server.js` lets a handful of friends play the same engine remotely. It is designed to
@@ -290,6 +308,7 @@ online/
   diag-stuck.js         "stuck under the barrier" diagnostic
   valuenet.json         deployed model
   tune-back/            tuning log and anchor state from the last run
+mcp/                    MCP server: AI agents play through tool calls (src/index.mjs tools, game.mjs turn loop, view.mjs text views, data/ handbook, test/smoke.mjs)
 selfplay/               many-core hill-climb (tuner.py/validate.py, match.js game CLI) and its logs
 data/                   sample dataset
 docs/                   screenshots (-en / -zh, desktop + mobile)
