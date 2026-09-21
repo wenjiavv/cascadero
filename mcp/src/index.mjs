@@ -103,7 +103,7 @@ tool('list_moves', {
     limit: z.number().int().min(1).max(60).optional().describe('How many to show (default 15).'),
   },
   annotations: { readOnlyHint: true },
-}, async (a) => { const g = store.get(a.game_id); await g.settle(); return V.movesText(g, { filter: a.filter || 'scoring', near: a.near || null, limit: a.limit || 15 }); });
+}, async (a) => { const g = store.get(a.game_id); await g.settle(); return await V.movesText(g, { filter: a.filter || 'scoring', near: a.near || null, limit: a.limit || 15 }); });
 
 tool('inspect', {
   title: 'Inspect a town or field',
@@ -121,8 +121,9 @@ tool('engine_advice', {
   const g = store.get(a.game_id); await g.settle(); const p = g.pending; if (!p) return g.st.ended ? V.resultText(g) : 'No decision is pending.';
   const st = clone(g.st); st.fx = null; E.setBoard(st.boardId || 'front'); st.players[p.seat].level = a.level === 'normal' ? 2 : 3;
   const who = `Built-in bot (${a.level || 'hard'})`;
-  if (p.kind === 'place'){ const r = await E.botDecide.choosePlacement(st, p.seat); E.setBoard(g.st.boardId || 'front'); return r ? `${who} would place at ${r.key}${r.seal ? ' and spend a seal' : ''}.\n` + V.movesText(g, { filter: 'all', near: r.key, limit: 6 }) : `${who} sees no legal placement.`; }
-  if (p.kind === 'cube'){ const c = await E.botDecide.chooseCube(st, p.seat, p.why); return `${who} would ${c ? 'advance the ' + c + ' cube' : 'skip'}.`; }
+  if (p.kind === 'place'){ const r = await E.botDecide.choosePlacement(st, p.seat); E.setBoard(g.st.boardId || 'front'); return r ? `${who} would place at ${r.key}${r.seal ? ' and spend a seal' : ''} (first line below). It picks by playing each leading candidate a few turns ahead for both sides, so its choice is not always the top of the one-move ranking; the other lines are the next-best candidates by that ranking.\n` + await V.movesText(g, { filter: 'all', limit: 5, first: r }) : `${who} sees no legal placement.`; }
+  if (p.kind === 'cube'){ let c = await E.botDecide.chooseCube(st, p.seat, p.why); if (c && g.validate('cube', c).err) c = null;   // the bot may name a blocked track when nothing better exists; for it that is a no-op
+    return `${who} would ${c ? 'advance the ' + c + ' cube' : 'skip'}.`; }
   if (p.kind === 'move'){ const m = await E.botDecide.chooseMove(st, p.seat, p.why); return `${who} would ${m ? `move the envoy ${m.from} -> ${m.to}` : 'skip'}.`; }
   const h = await E.botDecide.chooseHerald(st, p.seat, p.why); return `${who} would ${h ? `move the herald ${h.from} -> ${h.to}` : 'skip'}.`;
 });

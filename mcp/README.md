@@ -53,7 +53,7 @@ Then tell the agent: *"Play a game of Cascadero against the normal bot."* — or
 |---|---|
 | `new_game` | seats (`agent` / `easy` / `normal` / `hard`, 2–4), board (`front` / `back`), first player, colours, herald set, language |
 | `get_state` | full position, what happened since the last call, the pending decision; optional ASCII map |
-| `list_moves` | legal placements with exact facts: adjacent towns, which towns score and for how many steps, simulated result, farmer tile, what a quiet move sets up; `filter` = `scoring` / `setup` / `all`, `near` = a town or field |
+| `list_moves` | legal placements with exact facts: adjacent towns, which towns score and for how many steps, the exact result under the real rules (cube steps, VP itemised by source, seals, extra turns, whether it ends the game), farmer tile, what a quiet move sets up; `filter` = `scoring` / `setup` / `all`, `near` = a town or field |
 | `inspect` | exact neighbourhood of a town or field; for an envoy, its group and the towns that group can no longer score |
 | `place_envoy` | the main move (`field`, optional `use_seal`) |
 | `choose_track` | answer "advance any cube 1" (chain space or farmer tile) |
@@ -80,7 +80,10 @@ Resources: `cascadero://handbook`, `cascadero://handbook/zh`, `cascadero://track
 - Finished games are appended to `gamelog.jsonl` in the same shape as the table server's log (opening snapshot +
   decision list), so they can feed the same analysis scripts.
 - The engine keeps the active board in module state; the server therefore runs one tool call at a time.
+- The "result" shown by `list_moves` comes from running the real turn on a copy of the position, so achievements and
+  colour pairs that are already claimed are never promised again. The quick simulator is only used for sorting.
 - `npm test` plays three complete games over the real protocol with a scripted client and checks illegal
-  answers, undo, post-game notes and resuming after a restart.
+  answers, undo, post-game notes and resuming after a restart. `node test/fuzz.mjs` throws random legal and junk
+  answers, skips and undos at the session layer for a few dozen games.
 
 This is an unofficial fan project; see the repository's NOTICE.md.

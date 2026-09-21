@@ -39,7 +39,7 @@ claude mcp add cascadero -e CASC_MCP_LANG=zh -- node /绝对路径/cascadero/mcp
 |---|---|
 | `new_game` | 开局：座位（`agent` / `easy` / `normal` / `hard`，2–4 个）、版图（`front` 正面 / `back` 背面农夫板）、先手、颜色、使者棋起始组、语言 |
 | `get_state` | 完整局面 + 上次调用以来发生了什么 + 正在等的决策；可附字符地图 |
-| `list_moves` | 合法落点及精确事实：相邻城镇、哪座城计分几格、模拟结果、农夫板块、安静着法能铺垫什么；`filter` = `scoring` / `setup` / `all`，`near` = 某城或某格 |
+| `list_moves` | 合法落点及精确事实：相邻城镇、哪座城计分几格、按真实规则算出的结果（推几格、得分及来源明细、印章、额外回合、是否终局）、农夫板块、安静着法能铺垫什么；`filter` = `scoring` / `setup` / `all`，`near` = 某城或某格 |
 | `inspect` | 某城 / 某格的精确邻接；如果格上有使者，给出它所在的群和这个群已经不能再计分的城镇 |
 | `place_envoy` | 主动作：放使者（`field`，可选 `use_seal`） |
 | `choose_track` | 回答「任选一个方块推 1 格」（连锁格或农夫板块） |
@@ -61,6 +61,7 @@ claude mcp add cascadero -e CASC_MCP_LANG=zh -- node /绝对路径/cascadero/mcp
 
 - 可以有多个 `agent` 座位：待决策里总会写明是哪个座位，所以一个 AI 可以左右互搏，两个 AI 也可以同桌。
 - 下完的对局追加到 `gamelog.jsonl`，格式与联机牌桌的对局记录一致（开局快照 + 决策序列）。
-- `npm test` 用脚本化客户端走真实协议下三整局，并检查非法答复、撤销、赛后笔记、重启续局。
+- `list_moves` 里的「结果」是在局面副本上跑一遍真实回合得到的，已经拿过的成就、同色对不会再被算进去；快速模拟器只用来排序。
+- `npm test` 用脚本化客户端走真实协议下三整局，并检查非法答复、撤销、赛后笔记、重启续局；`node test/fuzz.mjs` 在会话层随机乱下几十局（随机合法答复、乱答、放弃、撤销）。
 
 非官方爱好者项目，见仓库 NOTICE.md。

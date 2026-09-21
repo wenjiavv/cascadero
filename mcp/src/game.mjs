@@ -74,7 +74,7 @@ export class Game {
     });
     return {
       choosePlacement: () => ask('place', null, null),
-      chooseCube: (st, pi, why) => ask('cube', why, E.cubeOptions(st, pi)),
+      chooseCube: (st, pi, why) => { const opts = E.cubeOptions(st, pi); return opts.some(o => !o.blocked) ? ask('cube', why, opts) : Promise.resolve(null); },   // every cube at the top or under a barrier: nothing to decide
       chooseMove: (st, pi, why) => { const mine = Object.keys(st.board).filter(k => st.board[k].p === pi && E.ff()[k].some(n => !st.board[n])); return mine.length ? ask('move', why, null) : Promise.resolve(null); },
       chooseHerald: (st, pi, why) => ask('herald', why, { from: st.heralds.slice(), to: E.heraldTargets(st) }),
     };
