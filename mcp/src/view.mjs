@@ -83,7 +83,7 @@ export function pendingText(g){
   const p = g.pending, st = g.st; if (!p) return 'No decision is pending.';
   const head = `DECISION NEEDED from seat ${p.seat} (${st.players[p.seat].name}): `;
   if (p.kind === 'place') return head + `place an envoy. ${st.players[p.seat].envoys} left${st.players[p.seat].seals ? `, ${st.players[p.seat].seals} seal(s) in hand` : ''}. Use list_moves to see options, then place_envoy.`;
-  if (p.kind === 'cube') return head + `${whyText(g, p.why)}\n  Options: ${p.opts.map(o => `${o.value} ${o.pos}->${o.blocked ? (o.top ? 'top, unavailable' : 'blocked by barrier, unavailable') : o.to + ' [' + (spaceText(E.trackDef(o.value)[o.to]) || 'empty') + ']'}`).join(' | ')}\n  ${HINT.cube}`;
+  if (p.kind === 'cube') return head + `${whyText(g, p.why)}\n  Options: ${p.opts.map(o => `${o.value} ${o.pos}->${o.blocked ? (o.top ? 'top, unavailable' : 'blocked by barrier, unavailable') : o.to + ' [' + (spaceText(E.trackDef(o.value)[o.to]) || 'empty') + ']' + ((E.trackDef(o.value)[o.to + 1] || {}).x ? ' WARNING: then stuck under the barrier until a 2+ step score on this colour' : '')}`).join(' | ')}\n  ${HINT.cube}`;
   if (p.kind === 'move'){
     const mine = Object.keys(st.board).filter(k => st.board[k].p === p.seat).map(k => ({ k, to: E.ff()[k].filter(n => !st.board[n]) })).filter(x => x.to.length);
     return head + `${whyText(g, p.why)}\n  Movable envoys -> empty neighbours: ${mine.map(x => `${x.k} -> ${x.to.join(' ')}`).join(' | ')}\n  A moved envoy scores nothing by itself (it only changes your shape; moving onto a farmer tile triggers the tile). ${HINT.move}`;
@@ -158,7 +158,7 @@ function quick(st, pi, key, seal){
 async function enrich(base, st, pi, f){
   const x = await exact(base, st, pi, f.key, f.seal); const ev = { scorings: f.scorings };
   f.towns = (E.ft()[f.key] || []).map(t => { const tt = E.town()[t]; const sc = ev.scorings.find(q => q.town === t);
-    return `${t} ${tt.color}${st.heralds.includes(t) ? '+herald' : ''}${sc ? ` SCORES ${sc.steps}` : ''}`; });
+    return `${t} ${tt.color}${st.heralds.includes(t) ? '+herald' : ''}${sc ? ` SCORES ${sc.steps}` : f.single ? ' (no score: lone envoy, and this town is then spent for the group it grows into)' : ' (no score: the group you join already touches it)'}`; });
   // what a quiet placement would set up: the best scoring follow-up on a neighbouring empty field
   f.follow = null;
   if (!f.scorings.length && !x.ends){ let best = 0;
@@ -174,7 +174,7 @@ function factLine(f){
   if (f.tile) bits.push(`farmer tile: ${TILE_TEXT[f.tile]}`);
   const gain = [];
   if (Object.keys(f.adv).length) gain.push('cubes ' + Object.entries(f.adv).map(([c, d]) => `${c}+${d}`).join(' '));
-  if (f.vp) gain.push(`VP +${f.vp} (${f.why.join(', ')})`); if (f.seals > 0) gain.push(`seal +${f.seals}`); if (f.extra > 0) gain.push(`extra turn +${f.extra}`); if (f.ends) gain.push('ENDS THE GAME');
+  if (f.vp) gain.push(`VP +${f.vp} (${f.why.join(', ')})`); if (f.seal) gain.push(`seals: 1 spent${f.seals > 0 ? `, ${f.seals} gained` : ''}`); else if (f.seals > 0) gain.push(`seal +${f.seals}`); if (f.extra > 0) gain.push(`extra turn +${f.extra}`); if (f.ends) gain.push('ENDS THE GAME');
   bits.push(gain.length ? 'result: ' + gain.join(', ') : 'no immediate gain');
   if (f.follow) bits.push('sets up: ' + f.follow);
   bits.push(`h=${f.score.toFixed(1)}`);
@@ -187,13 +187,15 @@ export async function movesText(g, { filter = 'scoring', near = null, limit = 15
   if (near){ if (!E.nb()[near]) return `"${near}" is not a cell of this board.`; const ring = new Set([near, ...E.nb()[near]]); for (const k of [...ring]) (E.nb()[k] || []).forEach(n => ring.add(n)); legal = legal.filter(k => ring.has(k)); }
   let all = [];
   for (const k of legal){ all.push(quick(st, pi, k, false)); if (pl.seals > 0 && E.canUseSealHere(st, k, pi)) all.push(quick(st, pi, k, true)); }
-  const scoring = all.filter(f => f.scorings.length || f.tile), quiet = all.filter(f => !f.scorings.length && !f.tile);
+  const base = simBase(st); for (const f of all) await enrich(base, st, pi, f);                       // ~0.4 ms each
+  const hot = (f) => f.scorings.length || f.tile || f.vp > 0 || f.extra > 0 || f.seals > 0;          // includes quiet-looking joins that complete an achievement or colour pair
+  const scoring = all.filter(hot), quiet = all.filter(f => !hot(f));
   let pick = filter === 'all' || near ? all : filter === 'setup' ? quiet : scoring;
   if (!pick.length && filter === 'scoring'){ pick = quiet; filter = 'setup'; }
   pick.sort((a, b) => b.score - a.score);
   if (first){ const i = pick.findIndex(f => f.key === first.key && f.seal === !!first.seal); if (i > 0) pick.unshift(pick.splice(i, 1)[0]); }   // engine_advice: its choice on top
-  pick = pick.slice(0, limit); const base = simBase(st); for (const f of pick) await enrich(base, st, pi, f);
-  const L = [`Legal placements for seat ${pi} (${pl.name}): ${legal.length} fields${near ? ` within 2 of ${near}` : ''}; ${scoring.length} of them score or trigger a farmer tile now, ${quiet.length} are quiet.`,
+  pick = pick.slice(0, limit);
+  const L = [`Legal placements for seat ${pi} (${pl.name}): ${legal.length} fields${near ? ` within 2 of ${near}` : ''}; ${scoring.length} options have an immediate effect (cube steps, VP, seal, extra turn or farmer tile), ${quiet.length} are quiet.`,
     `Showing ${filter === 'all' || near ? 'all kinds' : filter === 'setup' ? 'quiet (set-up) moves' : 'moves with an immediate effect'}, best ${pick.length} by the engine's one-move heuristic h (a rough guide that ignores your long-term plan):`];
   pick.forEach(f => L.push(factLine(f)));
   L.push('"result" is the exact outcome of this one placement under the real rules, achievements included (chain advances are answered by a simple rule here; in the game you choose them, and optional envoy/herald moves are skipped). "SCORES n" = cube steps on that colour.',
