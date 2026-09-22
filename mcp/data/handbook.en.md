@@ -16,8 +16,11 @@ there is no luck after set-up, so every mistake is yours.
   - +1 step if a herald stands on the town.
 - **A lone envoy scores nothing** — unless you spend a seal with it (`use_seal`), in which case it scores every
   town next to it by the same step rule.
-- **A group scores each town only once, ever.** A town touched by a lone envoy counts as touched by the group that
-  envoy later grows into, so that group will never score it. A *different* group of yours can still score it.
+- **A group cannot score a town that another envoy of the same group is already next to.** So a town touched by a
+  lone envoy is not scored by the group that envoy later grows into (the lone envoy still sits there), and a group
+  never scores the same town twice while it keeps touching it. A *different* group of yours can still score it.
+  (Envoys move only in the rare "seal already taken" case; if the last envoy next to a town moves away, the group
+  could score that town again.)
 - **Tracks** (see `get_rules` topic `tracks` for the exact spaces): VP spaces (the first cube to arrive gets the
   bigger number), chain spaces (advance any cube 1), extra-turn spaces, seal spaces and two barriers.
   - VP / chain / extra turn trigger when passed or landed on.
@@ -32,7 +35,9 @@ there is no luck after set-up, so every mistake is yours.
 - **Back board only:** farmer slots hold face-up tiles (+2 VP, +3 VP, advance any cube 1, extra turn, move a
   herald). A slot is locked until you have an envoy on a neighbouring field; placing (or moving) an envoy onto it
   triggers the tile.
-- **End.** The game ends at once when a player reaches 50 VP, or when a player has to move and has no envoy left.
+- **End.** After a placement and all of its chain advances, achievements and extra-turn bookkeeping are resolved, the
+  game ends if any player has 50 VP or more (so a placement that crosses 50 still finishes its chain decisions, and
+  those can still bring your own cube to the top). It also ends when a player has to move and has no envoy left.
 - **Winner. Only players whose OWN-colour cube has reached 15 qualify.** Highest VP among the qualified wins (tie:
   whoever was later in the first-round turn order). If nobody qualified, highest VP wins a minor victory.
 
@@ -68,7 +73,7 @@ Coordinates are `"col,row"`. Do not guess adjacency from the ASCII map when it m
    opponent also denies it.
 7. **Several small groups beat one big snake** for track steps, because each group can score the same town again;
    one big group is what the group achievements (a4, a6, colour pairs, +10) want. Decide which you are doing.
-8. **Watch the clock.** The game stops the moment someone hits 50. If you are qualified and ahead, rush VP. If the
+8. **Watch the clock.** The game stops after the placement in which someone reaches 50. If you are qualified and ahead, rush VP. If the
    opponent is about to qualify and leads, deny the fields next to the towns of their colour — free fields next to
    a town are limited.
 9. **Extra turns compound.** An extra turn taken just before a big scoring field, or to grab a contested field,

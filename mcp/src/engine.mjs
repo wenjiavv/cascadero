@@ -20,7 +20,10 @@ function locate(){
   if (mtime(built) < mtime(html)){
     const script = path.join(repo, 'online', 'build-engine.py');
     try { execFileSync('python3', [script], { stdio: ['ignore', 'ignore', 'pipe'] }); }
-    catch (e) { if (!fs.existsSync(built)) throw new Error(`engine.js is missing and could not be built (python3 ${script}): ${e.message}`); }
+    catch (e) {
+      if (!fs.existsSync(built)) throw new Error(`engine.js is missing and could not be built (python3 ${script}): ${e.message}`);
+      console.error(`cascadero-mcp: WARNING using a STALE engine.js (older than index.html); rebuild failed: ${String(e.message).split('\n')[0]}`);
+    }
   }
   return built;
 }

@@ -158,6 +158,7 @@ export class Game {
     this.st = clone(target.snap); this.st.fx = null; this.rec.moves.length = target.moves; delete this.rec.result;
     E.log(this.st, 'log.undoDone', { nm: this.st.players[target.seat].name, turn: target.turn });
     this.lastSeen = this.st.log[this.st.log.length - 2] || null;
+    this.saved = clone(this.st); this.persist();                                                       // a restart before the next turn completes must restore the undone position, not the old one
     this.start(); await this.settle();
   }
 
@@ -172,7 +173,8 @@ export class Game {
   finish(){
     const st = this.st; if (!st.result) return;
     this.rec.result = { reason: st.result.reason, winner: st.result.winner, minor: st.result.minor, vp: st.players.map(p => p.vp), own: st.players.map(p => p.cubes[p.color]), ended: new Date().toISOString() };
-    this.store.appendLog(this.rec);
+    this.rec.rev = (this.rec.rev || 0) + 1;                                                            // an undo after the end and a new finish append another record: keep the last one per id
+    this.store.appendLog({ ...this.rec, tag: 'end' });
   }
   persist(){ this.store.save(this); }
   toJSON(){ return { id: this.id, cfg: this.cfg, created: this.created, updated: new Date().toISOString(), ended: !!this.st.ended, rec: this.rec, saved: this.saved }; }
@@ -200,7 +202,9 @@ export class Store {
   }
   file(id){ return path.join(this.dir, 'games', id + '.json'); }
   newId(){ let id; do { id = 'g' + crypto.randomBytes(3).toString('hex'); } while (this.games.has(id) || fs.existsSync(this.file(id))); return id; }
-  save(g){ try { fs.writeFileSync(this.file(g.id), JSON.stringify(g)); } catch (e) { console.error('save', e.message); } }
+  save(g){ const f = this.file(g.id), tmp = f + '.tmp';                                                // write-then-rename: a crash mid-write must not destroy the only copy
+    try { fs.writeFileSync(tmp, JSON.stringify(g)); fs.renameSync(tmp, f); g.saveError = null; }
+    catch (e) { g.saveError = e.message; console.error('save', g.id, e.message); try { fs.unlinkSync(tmp); } catch (e2) {} } }
   appendLog(rec){ try { fs.appendFileSync(path.join(this.dir, 'gamelog.jsonl'), JSON.stringify(rec) + '\n'); } catch (e) { console.error('gamelog', e.message); } }
   create(opts){ const g = Game.create(this.newId(), opts, this); this.games.set(g.id, g); this.current = g.id; g.persist(); g.start(); return g; }
   listSaved(){

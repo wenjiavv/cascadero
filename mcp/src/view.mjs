@@ -105,6 +105,7 @@ export function afterText(g, lead){
   const st = g.st; board(st); const L = []; if (lead) L.push(lead);
   const ev = g.newEvents(); if (ev.length){ L.push('Events:'); ev.forEach(l => L.push('  ' + logLine(g, l))); }
   L.push('Score: ' + st.players.map((pl, i) => `[${i}] ${pl.name} ${pl.vp} VP, own ${pl.cubes[pl.color]}/${E.TOP}, envoys ${pl.envoys}, seals ${pl.seals}`).join(' | ') + ` | turn ${st.turn.num}`);
+  if (g.saveError){ L.push(`WARNING: the game could not be saved to disk (${g.saveError}); it will not survive a restart.`); }
   L.push('', st.ended ? resultText(g) : pendingText(g));
   return L.join('\n');
 }
@@ -148,8 +149,9 @@ export async function exact(base, st, pi, key, seal){
     else if (l.k === 'log.achAll') why.push('all five colour pairs: 10');
     else if (l.k === 'log.farmer' && (l.a.t === 'vp2' || l.a.t === 'vp3')) why.push(`farmer tile: ${l.a.t === 'vp2' ? 2 : 3}`);
   }
-  const stays = !s.ended && s.turn.player === pi && s.turn.num === st.turn.num;
-  return { adv, vp: p2.vp - pl.vp, why, seals: p2.seals - pl.seals + (seal ? 1 : 0), extra: s.turn.extra - st.turn.extra + (stays ? 1 : 0), ends: s.ended, after: s };
+  const outOfEnvoys = !s.ended && s.players[s.turn.player].envoys <= 0;                              // runTurn ends the game as soon as a player with no envoy has to move
+  const stays = !s.ended && !outOfEnvoys && s.turn.player === pi && s.turn.num === st.turn.num;
+  return { adv, vp: p2.vp - pl.vp, why, seals: p2.seals - pl.seals + (seal ? 1 : 0), extra: outOfEnvoys ? 0 : s.turn.extra - st.turn.extra + (stays ? 1 : 0), ends: s.ended || outOfEnvoys, after: s };
 }
 function quick(st, pi, key, seal){
   const ev = E.evalPlacement(st, key, pi, seal), r = E.simEval(st, pi, key, seal, 3);
@@ -175,6 +177,7 @@ function factLine(f){
   const gain = [];
   if (Object.keys(f.adv).length) gain.push('cubes ' + Object.entries(f.adv).map(([c, d]) => `${c}+${d}`).join(' '));
   if (f.vp) gain.push(`VP +${f.vp} (${f.why.join(', ')})`); if (f.seal) gain.push(`seals: 1 spent${f.seals > 0 ? `, ${f.seals} gained` : ''}`); else if (f.seals > 0) gain.push(`seal +${f.seals}`); if (f.extra > 0) gain.push(`extra turn +${f.extra}`); if (f.ends) gain.push('ENDS THE GAME');
+  if (!gain.length && f.scorings.length) gain.push('nothing: the cube on that track is at the top or stuck under a barrier');
   bits.push(gain.length ? 'result: ' + gain.join(', ') : 'no immediate gain');
   if (f.follow) bits.push('sets up: ' + f.follow);
   bits.push(`h=${f.score.toFixed(1)}`);
@@ -188,7 +191,7 @@ export async function movesText(g, { filter = 'scoring', near = null, limit = 15
   let all = [];
   for (const k of legal){ all.push(quick(st, pi, k, false)); if (pl.seals > 0 && E.canUseSealHere(st, k, pi)) all.push(quick(st, pi, k, true)); }
   const base = simBase(st); for (const f of all) await enrich(base, st, pi, f);                       // ~0.4 ms each
-  const hot = (f) => f.scorings.length || f.tile || f.vp > 0 || f.extra > 0 || f.seals > 0;          // includes quiet-looking joins that complete an achievement or colour pair
+  const hot = (f) => Object.keys(f.adv).length > 0 || f.vp > 0 || f.extra > 0 || f.seals > 0 || f.tile === 'herald';   // judged on the exact result: a scoring whose cube is blocked is not an effect; a quiet-looking join that completes an achievement is
   const scoring = all.filter(hot), quiet = all.filter(f => !hot(f));
   let pick = filter === 'all' || near ? all : filter === 'setup' ? quiet : scoring;
   if (!pick.length && filter === 'scoring'){ pick = quiet; filter = 'setup'; }
@@ -217,7 +220,7 @@ export function inspectText(g, key){
     L.push(`${key}: field, ${who(key)}.`);
     const e = st.board[key];
     if (e){ const grp = E.groupOf(st, key); const towns = new Set(); grp.forEach(f => E.ft()[f].forEach(t => towns.add(t)));
-      L.push(`Group of seat ${e.p}: ${grp.size} envoy(s): ${[...grp].join(' ')}`, `Towns this group already touches (it cannot score them again): ${[...towns].map(t => `${t} ${E.town()[t].color}`).join(', ') || 'none'}`); }
+      L.push(`Group of seat ${e.p}: ${grp.size} envoy(s): ${[...grp].join(' ')}`, `Towns this group touches now (a new envoy of this group cannot score them while another envoy of the group is next to them): ${[...towns].map(t => `${t} ${E.town()[t].color}`).join(', ') || 'none'}`); }
     L.push('Neighbours:'); E.nb()[key].forEach(k => L.push(`  ${k}: ${E.town()[k] ? `${E.town()[k].color} town${st.heralds.includes(k) ? ' +herald' : ''}` : who(k)}`));
   }
   return L.join('\n');

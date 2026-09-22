@@ -78,7 +78,8 @@ Resources: `cascadero://handbook`, `cascadero://handbook/zh`, `cascadero://track
 - Several seats may be `agent`: the pending decision always names the seat, so one agent can play both sides or
   two agents can share a game.
 - Finished games are appended to `gamelog.jsonl` in the same shape as the table server's log (opening snapshot +
-  decision list), so they can feed the same analysis scripts.
+  decision list, `tag:"end"`), so they can feed the same analysis scripts. An undo after the end followed by a new
+  finish appends another record with a higher `rev`: the last record per `id` is the valid one.
 - The engine keeps the active board in module state; the server therefore runs one tool call at a time.
 - The "result" shown by `list_moves` comes from running the real turn on a copy of the position, so achievements and
   colour pairs that are already claimed are never promised again. The quick simulator is only used for sorting.
