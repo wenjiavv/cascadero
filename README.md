@@ -244,8 +244,12 @@ cd mcp && npm install
 claude mcp add cascadero -- node "$PWD/src/index.mjs"     # Claude Code; other clients: see mcp/README.md
 ```
 
-Then: *"Play a game of Cascadero against the normal bot."* Tools, resources and configuration are listed in
-[mcp/README.md](mcp/README.md); `npm test` plays three complete games over the real protocol.
+Then: *"Play a game of Cascadero against the normal bot."*
+
+![Claude Code playing Cascadero through the MCP server](mcp/docs/claude-code-en.png)
+
+Tools, resources and configuration are listed in [mcp/README.md](mcp/README.md); `npm test` plays three complete
+games over the real protocol.
 
 ## Self-hosted private table
 

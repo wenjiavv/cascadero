@@ -8,8 +8,10 @@
     "cascadero-mcp": "src/index.mjs"
   },
   "scripts": {
+    "build": "python3 ../online/build-engine.py",
     "start": "node src/index.mjs",
-    "test": "node test/smoke.mjs"
+    "test": "node test/smoke.mjs",
+    "fuzz": "node test/fuzz.mjs 40"
   },
   "engines": {
     "node": ">=20"
@@ -18,5 +20,17 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "zod": "^4.6.5"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wenjiavv/cascadero.git",
+    "directory": "mcp"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "board-game",
+    "cascadero",
+    "ai-agent"
+  ]
 }

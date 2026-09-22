@@ -202,8 +202,11 @@ cd mcp && npm install
 claude mcp add cascadero -e CASC_MCP_LANG=zh -- node "$PWD/src/index.mjs"     # Claude Code；其他客户端见 mcp/README.zh-CN.md
 ```
 
-然后说一句「和普通档下一局卡斯卡德罗」。工具、资料和配置见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md)；`npm test` 会走真实协议
-下三整局。
+然后说一句「和普通档下一局卡斯卡德罗」。
+
+![Claude Code 通过 MCP 服务下卡斯卡德罗](mcp/docs/claude-code-zh.png)
+
+工具、资料和配置见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md)；`npm test` 会走真实协议下三整局。
 
 ## 自托管私人牌桌
 
