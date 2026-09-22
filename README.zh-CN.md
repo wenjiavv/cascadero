@@ -1,27 +1,68 @@
-# 卡斯卡德罗 (Cascadero) — 非官方粉丝复刻 + AI
+# 卡斯卡德罗 MCP (Cascadero MCP) — 让 AI 智能体通过工具调用下桌游
 
 **[English → README.md](README.md)**
 
-一个单 HTML 文件的六角轨道桌游，加上为了把它下好而搭起来的整套 AI：可调权重的启发式机器人、
-推演搜索、自对弈产数据、学习式估值网络，以及一套配对对照评测框架。本文里每一个数字都出自这套框架。
+![MCP stdio](https://img.shields.io/badge/MCP-stdio-blue) ![Node.js 20+](https://img.shields.io/badge/node-%3E%3D20-brightgreen) ![License MIT](https://img.shields.io/badge/license-MIT-lightgrey) ![Unofficial fan project](https://img.shields.io/badge/status-unofficial%20fan%20project-orange)
 
-规则是对《Cascadero》（Reiner Knizia 设计，Bitewing Games 出版）的粉丝复刻。本项目非官方、
-非商业，美术和界面全部原创，重点在 AI。详见 [法律声明](#法律声明) 与 [NOTICE.md](NOTICE.md)。
+`mcp/` 是一个 [MCP（Model Context Protocol）](https://modelcontextprotocol.io) 服务，让 Claude Code、Claude Desktop、Cursor、
+Codex CLI 等任何 MCP 客户端都能和内置电脑下完整局的《卡斯卡德罗》（Cascadero，Reiner Knizia 设计的六角轨道桌游）——
+全程只靠文字工具调用，不截屏、不用视觉模型。AI 以文字读局面，看到每个合法落点的精确结果，回答规则引擎提出的决策；
+不合法的答复会被拒绝并说明原因，局面不变。
 
-![desktop](docs/screenshot-desktop-zh.png)
+服务底下的一切都在同一个仓库里：单 HTML 文件的浏览器版游戏、三档电脑和把它们训练出来的整套 AI（自对弈、学习式估值网络、
+配对对照评测框架），以及给朋友用的私人牌桌服务器。本项目非官方、非商业，详见 [法律声明](#法律声明) 与 [NOTICE.md](NOTICE.md)。
 
-## 仓库里有什么
+![Claude Code 通过 MCP 服务下卡斯卡德罗](mcp/docs/claude-code-zh.png)
+
+## 让 AI 开始下棋
+
+```bash
+git clone https://github.com/wenjiavv/cascadero.git
+cd cascadero/mcp && npm install && npm run build                            # Node 20+；构建步骤要 python3（生成 ../online/engine.js）
+claude mcp add cascadero -e CASC_MCP_LANG=zh -- node "$PWD/src/index.mjs"   # Claude Code；CASC_MCP_LANG=zh 让对局记录和手册用中文
+```
+
+Claude Desktop、Cursor、Codex CLI 在各自的 JSON / TOML 配置里指向同一条 `node …/mcp/src/index.mjs` 命令，
+可直接复制的片段见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md#安装)。
+
+然后对 AI 说：
+
+> 和普通档下一局卡斯卡德罗。先读手册，每一步用一句话解释，下到终局。
+
+### AI 拿到的是什么
+
+- **13 个工具。** `new_game`、`get_state`、`list_moves`、`inspect`、`place_envoy`、`choose_track`、`move_envoy`、
+  `move_herald`、`engine_advice`、`undo`、`list_games`、`get_rules`、`save_postgame_notes`。每个动作工具都返回发生了什么、
+  对手的应对和下一个决策，一整局就是「看 → 决定 → 动」的简单循环。
+- **精确事实，不是像素。** 玩家摘要、字符六边形地图、自己接下来的轨道格，以及每个合法落点在正式规则下的精确结果：
+  方块步数、按来源列出的分数、印章、额外回合、是否触发终局。
+- **引擎校验。** 不合法的答复以工具错误返回并说明原因——格子已占、农夫格未解锁、方块卡在禁行格下、答错了决策种类——
+  局面不变。一个普通的 Claude 会话（Sonnet、低思考量、只挂这一个服务）下完两整局，分别 67 和 77 次工具调用，
+  0 次被拒；两局都输给了*普通*档。
+- **2–4 个座位**，正面板或带农夫板块的背面板；每个座位可以是 AI 或电脑（简单 / 普通 / 困难）。多个 AI 座位可以让
+  一个模型左右互搏，或两个模型同桌。
+- **规则与策略手册**（中 / 英）以工具、资料和现成提示词三种形式提供；还有**问内置电脑**、**撤销**、**存档续局**和
+  会回灌进手册的**赛后笔记**。
+
+![get_state 输出的字符地图](mcp/docs/state-map.png)
+
+完整的工具说明、资料、配置与原理见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md)；`cd mcp && npm test` 会走真实协议下三整局，
+代码经过三轮外部只读审查（记录在 `mcp/docs/`）。
+
+## 仓库里还有什么
 
 | 部分 | 位置 | 作用 |
 |---|---|---|
+| 给 AI 用的 MCP 服务 | `mcp/` | 就是上面的主角：包在无头引擎外面的工具、资料和提示词。见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md)。 |
 | 游戏 + 引擎 + AI | `index.html` | 全部在浏览器里跑：规则引擎、三档 AI、动效、撤销、本地对局记录。无需构建。 |
 | AI 研究工具 | `online/*.js`、`online/*.py` | 引擎抽取、配对对照、跨引擎对照、模拟器差分测试、自对弈采样、估值网络训练、爬山调参、诊断。 |
 | 多核机自对弈调参 | `selfplay/` | 产出当前启发式权重的爬山调参器与终验脚本（2.67 万局）。 |
 | 数据集与模型 | `data/`、`online/valuenet.json`、GitHub Releases | 3.2 万局自对弈特征样本（JSONL）和已训练的估值网络。 |
 | 自托管私人牌桌 | `online/server.js` | 邀请制 WebSocket 服务器，几个朋友远程用同一引擎对局。不是公开服务。 |
-| 给 AI 用的 MCP 服务 | `mcp/` | 让 Claude Code、Claude Desktop、Cursor 等任何 MCP 客户端只靠文字工具调用就能和电脑下完整对局，不用截屏。见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md)。 |
 
-## 快速开始
+## 浏览器版游戏与 AI 工具
+
+![desktop](docs/screenshot-desktop-zh.png)
 
 本地游玩（单人对电脑，或 2–4 人同屏）：
 
@@ -190,23 +231,6 @@ index.html ──build-engine.py──▶ engine.js ──selfplay.js──▶ s
 
 有偏模拟器产的数据仍然有用：线上模型就是在它们上训练的，修复后照样好用，这本身就是一个数据点
 （模型对偏差不敏感，搜索才敏感）。
-
-## 让 AI 来下（MCP）
-
-`mcp/` 是包在同一套无头引擎外面的 [MCP](https://modelcontextprotocol.io) 服务。AI 开局后以文字读局面（摘要、字符六边形
-地图、每个合法落点的精确事实），回答引擎会问的四种决策；每次调用都会拿回对手的应对和下一个决策。不合法的答复会被拒绝并
-说明原因，局面不变。另带规则与策略手册、「问内置电脑」工具、撤销、存档续局，以及会回灌进手册的赛后笔记。
-
-```bash
-cd mcp && npm install
-claude mcp add cascadero -e CASC_MCP_LANG=zh -- node "$PWD/src/index.mjs"     # Claude Code；其他客户端见 mcp/README.zh-CN.md
-```
-
-然后说一句「和普通档下一局卡斯卡德罗」。
-
-![Claude Code 通过 MCP 服务下卡斯卡德罗](mcp/docs/claude-code-zh.png)
-
-工具、资料和配置见 [mcp/README.zh-CN.md](mcp/README.zh-CN.md)；`npm test` 会走真实协议下三整局。
 
 ## 自托管私人牌桌
 

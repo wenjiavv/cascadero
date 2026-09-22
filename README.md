@@ -1,30 +1,78 @@
-# Cascadero (卡斯卡德罗) — unofficial fan implementation + AI
+# Cascadero MCP — let an AI agent play a board game through tool calls
 
 **[中文说明 → README.zh-CN.md](README.zh-CN.md)**
 
-A hex route-building board game in a single HTML file, plus the complete AI stack that was
-built to play it well: a tunable heuristic bot, rollout search, self-play data generation, a
-learned value network, and a paired-duel evaluation harness that produced every number in
-this README.
+![MCP stdio](https://img.shields.io/badge/MCP-stdio-blue) ![Node.js 20+](https://img.shields.io/badge/node-%3E%3D20-brightgreen) ![License MIT](https://img.shields.io/badge/license-MIT-lightgrey) ![Unofficial fan project](https://img.shields.io/badge/status-unofficial%20fan%20project-orange)
 
-The rules are a fan re-implementation of *Cascadero* (Reiner Knizia, Bitewing Games). This
-project is unofficial and non-commercial, all art and UI are original, and the AI is the point.
-See [Legal notice](#legal-notice) and [NOTICE.md](NOTICE.md).
+`mcp/` is a [Model Context Protocol](https://modelcontextprotocol.io) server that lets Claude Code, Claude
+Desktop, Cursor, Codex CLI or any other MCP client play complete games of *Cascadero* (卡斯卡德罗, the hex
+route-building board game by Reiner Knizia) against built-in bots — through plain text tool calls, no screen
+capture, no vision model. The agent reads the position as text, sees the exact outcome of every legal move,
+answers the decisions the rules engine asks for, and any illegal answer is refused with the reason.
 
-![desktop](docs/screenshot-desktop-en.png)
+Everything the server stands on lives in the same repository: the browser game (one HTML file), the three bot
+levels and the AI stack that trained them (self-play, a learned value network, a paired-duel evaluation
+harness), and a private table server for friends. This is an unofficial, non-commercial fan project — see
+[Legal notice](#legal-notice) and [NOTICE.md](NOTICE.md).
 
-## What is in the box
+![Claude Code playing Cascadero through the MCP server](mcp/docs/claude-code-en.png)
+
+## Get an agent playing
+
+```bash
+git clone https://github.com/wenjiavv/cascadero.git
+cd cascadero/mcp && npm install && npm run build       # Node 20+; the build step needs python3 (generates ../online/engine.js)
+claude mcp add cascadero -- node "$PWD/src/index.mjs"   # Claude Code
+```
+
+Claude Desktop, Cursor and Codex CLI point at the same `node …/mcp/src/index.mjs` command from their JSON or
+TOML config — copy-paste snippets are in [mcp/README.md](mcp/README.md#install). Set `CASC_MCP_LANG=zh` for a
+Chinese game log and handbook.
+
+Then tell the agent:
+
+> Play a game of Cascadero against the normal bot. Read the handbook first, explain each move in one
+> sentence, and play to the end.
+
+### What the agent gets
+
+- **13 tools.** `new_game`, `get_state`, `list_moves`, `inspect`, `place_envoy`, `choose_track`, `move_envoy`,
+  `move_herald`, `engine_advice`, `undo`, `list_games`, `get_rules`, `save_postgame_notes`. Every action tool
+  returns what happened, the opponents' replies and the next decision, so a whole game is a plain
+  *look → decide → act* loop.
+- **Exact facts instead of pixels.** Player summary, ASCII hex map, the agent's next track spaces, and for every
+  legal placement the exact result under the real rules: cube steps, VP itemised by source, seals, extra turns,
+  whether it ends the game.
+- **Validated by the engine.** Illegal answers come back as tool errors that say why — occupied field, locked
+  farmer slot, a cube stuck under a barrier, wrong kind of decision — and change nothing. A stock Claude session
+  (Sonnet, low effort, only this server attached) played two complete games, 67 and 77 tool calls, with zero
+  rejected calls. It lost both to the *normal* bot.
+- **2–4 seats**, front board or the back board with farmer tiles; any seat is an agent or a bot (easy / normal /
+  hard). Several agent seats let one model play both sides or two models share a table.
+- **Rules and strategy handbook** (English / Chinese) as a tool, as resources and as a ready-made prompt; **ask
+  the built-in bot**, **undo**, **saved games**, and **post-game notes** that are fed back into the handbook next
+  time.
+
+![get_state output with the ASCII map](mcp/docs/state-map.png)
+
+The full tool reference, resources, configuration and internals are in [mcp/README.md](mcp/README.md);
+`cd mcp && npm test` plays three complete games over the real protocol, and the code went through three rounds
+of external read-only review (notes in `mcp/docs/`).
+
+## What else is in the box
 
 | Part | Where | What it does |
 |---|---|---|
+| MCP server for AI agents | `mcp/` | The headline above: tools, resources and a prompt around the headless engine. See [mcp/README.md](mcp/README.md). |
 | Game + engine + AI | `index.html` | Everything runs in the browser: rules engine, three AI levels, animations, undo, local game log. No build step. |
 | AI research tooling | `online/*.js`, `online/*.py` | Engine extraction, paired duels, cross-engine duels, simulator differential test, self-play sampling, value-net training, hill-climb tuning, diagnostics. |
 | Self-play tuning on a many-core box | `selfplay/` | The hill-climb tuner and validation runs that produced the current heuristic weights (26.7k games). |
 | Datasets and models | `data/`, `online/valuenet.json`, GitHub Releases | 32k self-play games as JSONL features, plus the trained value net. |
 | Self-hosted private table | `online/server.js` | Invite-only WebSocket server so a few friends can play remotely with the same engine. Not a public service. |
-| MCP server for AI agents | `mcp/` | Lets Claude Code, Claude Desktop, Cursor or any other MCP client play full games against the bots through text tool calls — no screen capture. See [mcp/README.md](mcp/README.md). |
 
-## Quick start
+## The browser game and the AI tools
+
+![desktop](docs/screenshot-desktop-en.png)
 
 Play locally (single player vs bots, hot-seat 2–4 players):
 
@@ -229,27 +277,6 @@ Self-play samples are JSONL, one row per (turn, perspective):
 Datasets from the biased simulator are still useful: the deployed model was trained on them and
 survived the fix, which is itself a data point (the model is insensitive to the bias; the search
 was not).
-
-## Let an AI agent play (MCP)
-
-`mcp/` is a [Model Context Protocol](https://modelcontextprotocol.io) server around the same headless engine. An
-agent starts a game, reads the position as text (summary, ASCII hex map, exact facts for every legal placement),
-answers the four kinds of decision the engine asks for, and gets the opponents' replies plus the next decision
-back from every call. Illegal answers are refused with the reason and change nothing. It also ships a rules and
-strategy handbook, an "ask the built-in bot" tool, undo, saved games, and post-game notes that are fed back into
-the handbook for the next game.
-
-```bash
-cd mcp && npm install
-claude mcp add cascadero -- node "$PWD/src/index.mjs"     # Claude Code; other clients: see mcp/README.md
-```
-
-Then: *"Play a game of Cascadero against the normal bot."*
-
-![Claude Code playing Cascadero through the MCP server](mcp/docs/claude-code-en.png)
-
-Tools, resources and configuration are listed in [mcp/README.md](mcp/README.md); `npm test` plays three complete
-games over the real protocol.
 
 ## Self-hosted private table
 
