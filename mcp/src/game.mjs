@@ -155,7 +155,8 @@ export class Game {
     if (!target) throw new GameError('nothing to undo: there is no earlier placement of yours in this game');
     this.hist.length -= atTurnStart ? 2 : 1;                                                           // the loop pushes the snapshot again when it re-asks
     this.gen++; if (p){ this.pending = null; try { p.reject({ abort: true }); } catch (e) {} }
-    this.st = clone(target.snap); this.st.fx = null; this.rec.moves.length = target.moves; delete this.rec.result;
+    this.st = clone(target.snap); this.st.fx = null; this.rec.moves.length = target.moves;
+    if (this.rec.result){ delete this.rec.result; this.store.appendLog({ ...this.rec, tag: 'undo' }); }              // the finished record is no longer valid: append an unfinished one so 'last per id' sees it
     E.log(this.st, 'log.undoDone', { nm: this.st.players[target.seat].name, turn: target.turn });
     this.lastSeen = this.st.log[this.st.log.length - 2] || null;
     this.saved = clone(this.st); this.persist();                                                       // a restart before the next turn completes must restore the undone position, not the old one

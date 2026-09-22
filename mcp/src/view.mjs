@@ -74,6 +74,7 @@ export function stateText(g, { map = false, events = true } = {}){
     for (const c of E.TRACK_COLORS) L.push(`  ${c}${c === pl.color ? ' (OWN)' : ''} at ${pl.cubes[c]} -> ${nextOnTrack(st, pl, c)}`);
   }
   if (events){ const ev = g.newEvents(); if (ev.length){ L.push('', 'What happened since your last call:'); ev.forEach(l => L.push('  ' + logLine(g, l))); } }
+  if (g.saveError) L.push('', saveWarning(g));
   L.push('', st.ended ? resultText(g) : pendingText(g));
   if (map) L.push('', mapText(st));
   return L.join('\n');
@@ -105,10 +106,11 @@ export function afterText(g, lead){
   const st = g.st; board(st); const L = []; if (lead) L.push(lead);
   const ev = g.newEvents(); if (ev.length){ L.push('Events:'); ev.forEach(l => L.push('  ' + logLine(g, l))); }
   L.push('Score: ' + st.players.map((pl, i) => `[${i}] ${pl.name} ${pl.vp} VP, own ${pl.cubes[pl.color]}/${E.TOP}, envoys ${pl.envoys}, seals ${pl.seals}`).join(' | ') + ` | turn ${st.turn.num}`);
-  if (g.saveError){ L.push(`WARNING: the game could not be saved to disk (${g.saveError}); it will not survive a restart.`); }
+  if (g.saveError) L.push(saveWarning(g));
   L.push('', st.ended ? resultText(g) : pendingText(g));
   return L.join('\n');
 }
+const saveWarning = (g) => `WARNING: this turn could not be saved to disk (${g.saveError}); after a restart the game may fall back to the last turn that was saved.`;
 
 /* ---------- map ---------- */
 // Flat-top hexes in vertical columns; odd columns sit half a cell higher, so each text line holds one parity only.
@@ -160,7 +162,7 @@ function quick(st, pi, key, seal){
 async function enrich(base, st, pi, f){
   const x = await exact(base, st, pi, f.key, f.seal); const ev = { scorings: f.scorings };
   f.towns = (E.ft()[f.key] || []).map(t => { const tt = E.town()[t]; const sc = ev.scorings.find(q => q.town === t);
-    return `${t} ${tt.color}${st.heralds.includes(t) ? '+herald' : ''}${sc ? ` SCORES ${sc.steps}` : f.single ? ' (no score: lone envoy, and this town is then spent for the group it grows into)' : ' (no score: the group you join already touches it)'}`; });
+    return `${t} ${tt.color}${st.heralds.includes(t) ? '+herald' : ''}${sc ? ` SCORES ${sc.steps}` : f.single ? ' (no score: a lone envoy scores nothing, and the group it grows into cannot score this town while this envoy stays next to it)' : ' (no score: the group you join already touches it)'}`; });
   // what a quiet placement would set up: the best scoring follow-up on a neighbouring empty field
   f.follow = null;
   if (!f.scorings.length && !x.ends){ let best = 0;
@@ -191,7 +193,7 @@ export async function movesText(g, { filter = 'scoring', near = null, limit = 15
   let all = [];
   for (const k of legal){ all.push(quick(st, pi, k, false)); if (pl.seals > 0 && E.canUseSealHere(st, k, pi)) all.push(quick(st, pi, k, true)); }
   const base = simBase(st); for (const f of all) await enrich(base, st, pi, f);                       // ~0.4 ms each
-  const hot = (f) => Object.keys(f.adv).length > 0 || f.vp > 0 || f.extra > 0 || f.seals > 0 || f.tile === 'herald';   // judged on the exact result: a scoring whose cube is blocked is not an effect; a quiet-looking join that completes an achievement is
+  const hot = (f) => Object.keys(f.adv).length > 0 || f.vp > 0 || f.extra > 0 || f.seals > 0 || f.tile === 'herald' || f.ends;   // judged on the exact result: a scoring whose cube is blocked is not an effect; a quiet-looking join that completes an achievement is
   const scoring = all.filter(hot), quiet = all.filter(f => !hot(f));
   let pick = filter === 'all' || near ? all : filter === 'setup' ? quiet : scoring;
   if (!pick.length && filter === 'scoring'){ pick = quiet; filter = 'setup'; }

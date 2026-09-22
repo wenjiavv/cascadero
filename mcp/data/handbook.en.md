@@ -35,9 +35,10 @@ there is no luck after set-up, so every mistake is yours.
 - **Back board only:** farmer slots hold face-up tiles (+2 VP, +3 VP, advance any cube 1, extra turn, move a
   herald). A slot is locked until you have an envoy on a neighbouring field; placing (or moving) an envoy onto it
   triggers the tile.
-- **End.** After a placement and all of its chain advances, achievements and extra-turn bookkeeping are resolved, the
-  game ends if any player has 50 VP or more (so a placement that crosses 50 still finishes its chain decisions, and
-  those can still bring your own cube to the top). It also ends when a player has to move and has no envoy left.
+- **End.** After a placement and all of its chain advances and achievements are resolved, the game ends if any player
+  has 50 VP or more. A placement that crosses 50 still finishes its chain decisions (those can still bring your own
+  cube to the top), but extra turns it earned are not played. The game also ends when a player has to move and has
+  no envoy left.
 - **Winner. Only players whose OWN-colour cube has reached 15 qualify.** Highest VP among the qualified wins (tie:
   whoever was later in the first-round turn order). If nobody qualified, highest VP wins a minor victory.
 
@@ -63,8 +64,9 @@ Coordinates are `"col,row"`. Do not guess adjacency from the ASCII map when it m
    steps (already visited, or with a herald), not for 1.
 2. **Respect the barriers.** Do not let your own cube sit on 4 or 10 unless a 2+ step own-colour score is in
    sight. Chain advances and farmer advances are 1 step and cannot cross.
-3. **Do not burn towns.** Starting a group with a lone envoy next to a town you want wastes that town for the
-   whole group. Start one field away, then place the second envoy next to the town.
+3. **Do not burn towns.** Starting a group with a lone envoy next to a town you want means the group it grows into
+   cannot score that town for as long as that envoy sits there. Start one field away, then place the second envoy
+   next to the town.
 4. **Be the second visitor.** The first score on a town is 1 step, later ones 2. Let the opponent open towns and
    follow; avoid opening a town when the opponent can answer on it next turn for 2 (or 3 with the herald).
 5. **Look for fields that touch two or three unscored towns** — one envoy, several advances.
